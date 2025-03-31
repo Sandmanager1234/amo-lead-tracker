@@ -2,8 +2,6 @@ import os
 import aiohttp
 from loguru import logger
 from typing import Optional, Dict, Any
-from dotenv import load_dotenv
-from datetime import datetime
 
 
 class AmoCRMClient:

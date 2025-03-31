@@ -1,6 +1,7 @@
 import os
 import asyncio
-from datetime import datetime, timedelta
+from kztime import get_current_time
+from datetime import timedelta
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Lead, Events
@@ -43,19 +44,22 @@ amo_client = AmoCRMClient(
 )
 
 async def processing_leads(events: Events, poll_type: str):
-    for event in events:
-        try:
-            lead_json = await amo_client.get_lead(event.entity_id)
-            if lead_json:
-                lead = Lead.from_json(lead_json, poll_type=poll_type)
-                timestamp = event.created_at
-                if poll_type == 'proccessing':
-                    from_timestamp = (datetime.now() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0)
-                    events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
-                    timestamp = events.get_timestamp_by_index()
-                google.insert_value(*lead.get_row_col(timestamp))
-        except Exception as ex:
-            logger.error(f'Ошибка обработки сделки: {ex}')
+    for i, event in enumerate(events):
+        if i < 1:
+            try:
+                lead_json = await amo_client.get_lead(event.entity_id)
+                if lead_json:
+                    lead = Lead.from_json(lead_json, poll_type=poll_type)
+                    timestamp = event.created_at
+                    if poll_type == 'proccessing':
+                        from_timestamp = int((get_current_time() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
+                        events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
+                        timestamp = events.get_timestamp_by_index()
+                    google.insert_value(*lead.get_row_col(timestamp))
+            except Exception as ex:
+                logger.error(f'Ошибка обработки сделки: {ex}')
+        else:
+            exit()
 
 
 async def polling_leads(timestamp):
