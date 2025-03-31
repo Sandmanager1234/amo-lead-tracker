@@ -182,8 +182,9 @@ class Lead:
     pipeline_id : str
     status_id : str
     poll_type : str
-    tags_list : list[Tag]
+    tags : Tags
     reject_reason : str
+    created_at : int
 
     def __init__(self, id: str):
         self.id = id
@@ -203,7 +204,7 @@ class Lead:
             }
 
             poll_type_defaults = {
-                'tags': lambda self: 3 + self.tags_list.get_type(),
+                'tags': lambda self: 3 + self.tags.get_type(),
                 'success': lambda self: 11,
                 'qualified': lambda self: 8,
                 'proccessing': lambda self: 7
@@ -259,6 +260,7 @@ class Lead:
             )
             return "не заполнено"
         
+    # добавить created_at
     @classmethod
     def from_json(cls, data: dict, poll_type: str) -> "Lead":
         """Обрабатывает вкладку `Основное` в сделке."""
@@ -266,7 +268,7 @@ class Lead:
             self: Lead = cls(data.get("id", ""))
             self.pipeline_id = str(data.get('pipeline_id', ''))
             self.status_id = str(data.get('status_id', ''))
-            self.tags_list = Tags.from_json(data)
+            self.tags = Tags.from_json(data)
             
             self.poll_type = poll_type
             fields = data.get("custom_fields_values", []) if data.get("custom_fields_values", []) else []

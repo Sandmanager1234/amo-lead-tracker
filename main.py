@@ -44,38 +44,41 @@ amo_client = AmoCRMClient(
 )
 
 async def processing_leads(events: Events, poll_type: str):
-    for i, event in enumerate(events):
-        if i < 1:
-            try:
-                lead_json = await amo_client.get_lead(event.entity_id)
-                if lead_json:
-                    lead = Lead.from_json(lead_json, poll_type=poll_type)
-                    timestamp = event.created_at
-                    if poll_type == 'proccessing':
-                        from_timestamp = int((get_current_time() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
-                        events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
-                        timestamp = events.get_timestamp_by_index()
-                    google.insert_value(*lead.get_row_col(timestamp))
-            except Exception as ex:
-                logger.error(f'Ошибка обработки сделки: {ex}')
-        else:
-            exit()
+    for event in events:
+        try:
+            lead_json = await amo_client.get_lead(event.entity_id)
+            # провекра наличие сделки в бд
+            # если есть ничего не делать (добавить смену статуса в бд) по типу обработки
+            # если нет +1 гугл табл (всё, что снизу) + добавить в бд
+            if lead_json:
+                lead = Lead.from_json(lead_json, poll_type=poll_type)
+                timestamp = event.created_at
+                if poll_type == 'proccessing':
+                    # заменить проверкой в истории бд
+                    from_timestamp = int((get_current_time() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
+
+                    events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
+                    timestamp = events.get_timestamp_by_index()
+                google.insert_value(*lead.get_row_col(timestamp))
+        except Exception as ex:
+            logger.error(f'Ошибка обработки сделки: {ex}')
 
 
 async def polling_leads(timestamp):
+
     amo_client.start_session()
     try:
 
-        tags_events = Events.from_json(await amo_client.get_events_tags(timestamp))
-        await processing_leads(tags_events, 'tags')
+        tags_events = Events.from_json(await amo_client.get_events_tags(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
+        await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать
  
-        success_events = Events.from_json(await amo_client.get_events_success(timestamp))
-        await processing_leads(success_events, 'success')
+        success_events = Events.from_json(await amo_client.get_events_success(timestamp)) # завершились
+        await processing_leads(success_events, 'success') # 
         
-        qualified_events = Events.from_json(await amo_client.get_events_qualified(timestamp))
+        qualified_events = Events.from_json(await amo_client.get_events_qualified(timestamp)) # сделки, которые попали в статус квал и знр 
         await processing_leads(qualified_events, 'qualified')
 
-        from_processing_events = Events.from_json(await amo_client.get_events_from_processing(timestamp))
+        from_processing_events = Events.from_json(await amo_client.get_events_from_processing(timestamp)) # вышли из статуса в обработке
         await processing_leads(from_processing_events, 'proccessing')
 
     except Exception as e:

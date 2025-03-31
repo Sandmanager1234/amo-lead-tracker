@@ -6,3 +6,5 @@ credentials.json
 test.py
 .env
 __pycache__
+jsons
+lead_ids.json
