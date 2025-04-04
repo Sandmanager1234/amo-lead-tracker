@@ -1,0 +1,8 @@
+.venv
+logs
+timestamp.txt
+TODO
+credentials.json
+test.py
+.env
+__pycache__
