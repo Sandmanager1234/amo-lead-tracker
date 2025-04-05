@@ -80,7 +80,7 @@ class Events:
 class Tag:
     id : int
     name : str
-    target_type : str
+    target_type : int
     target_tags = [
         'ss',
         'ent', 
@@ -182,9 +182,10 @@ class Lead:
     pipeline_id : str
     status_id : str
     poll_type : str
-    tags : Tags
+    tags_type : int
     reject_reason : str
     created_at : int
+    updated_at : int
 
     def __init__(self, id: str):
         self.id = id
@@ -204,7 +205,7 @@ class Lead:
             }
 
             poll_type_defaults = {
-                'tags': lambda self: 3 + self.tags.get_type(),
+                'tags': lambda self: 3 + self.tags_type,
                 'success': lambda self: 11,
                 'qualified': lambda self: 8,
                 'proccessing': lambda self: 7
@@ -268,7 +269,9 @@ class Lead:
             self: Lead = cls(data.get("id", ""))
             self.pipeline_id = str(data.get('pipeline_id', ''))
             self.status_id = str(data.get('status_id', ''))
-            self.tags = Tags.from_json(data)
+            self.tags_type = Tags.from_json(data).get_type()
+            self.created_at = data.get('created_at', 0)
+            self.updated_at = data.get('updated_at', 0)
             
             self.poll_type = poll_type
             fields = data.get("custom_fields_values", []) if data.get("custom_fields_values", []) else []

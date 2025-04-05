@@ -1,14 +1,15 @@
 import os
 import asyncio
-from kztime import get_current_time
 from datetime import timedelta
-from google_sheets import GoogleSheets
-from amocrm.amocrm import AmoCRMClient
-from amocrm.models import Lead, Events
 from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
+from kztime import get_current_time
+from google_sheets import GoogleSheets
+from amocrm.amocrm import AmoCRMClient
+from amocrm.models import Lead, Events
+from database.db_manager import DBManager
 
 # Загрузка переменных из .env файла
 load_dotenv()
@@ -42,24 +43,39 @@ amo_client = AmoCRMClient(
     client_secret=os.getenv("client_secret"),
     permanent_access_token=True,
 )
+dbmanager = DBManager(
+    db_url=os.getenv("db_url")
+)
 
 async def processing_leads(events: Events, poll_type: str):
     for event in events:
         try:
-            lead_json = await amo_client.get_lead(event.entity_id)
+            lead = await dbmanager.get_lead(event.entity_id)
+            if not lead or poll_type != 'tags':
+                lead_json = await amo_client.get_lead(event.entity_id)
             # провекра наличие сделки в бд
             # если есть ничего не делать (добавить смену статуса в бд) по типу обработки
             # если нет +1 гугл табл (всё, что снизу) + добавить в бд
-            if lead_json:
-                lead = Lead.from_json(lead_json, poll_type=poll_type)
-                timestamp = event.created_at
-                if poll_type == 'proccessing':
-                    # заменить проверкой в истории бд
-                    from_timestamp = int((get_current_time() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
+                if lead_json:
+                    lead = Lead.from_json(lead_json, poll_type=poll_type)
+                    await dbmanager.add_lead(lead)
+                    if poll_type == 'tags':
+                        timestamp = lead.created_at
+                    else:
+                        timestamp = event.created_at
+                    if poll_type == 'proccessing':
+                        # заменить проверкой в истории бд
+                        from_timestamp = int((get_current_time() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
 
-                    events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
-                    timestamp = events.get_timestamp_by_index()
+                        events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
+                        timestamp = events.get_timestamp_by_index()
+            
                 google.insert_value(*lead.get_row_col(timestamp))
+            else:
+                if poll_type == 'tags':
+                    # если сделка есть в бд, то просто обновить статус
+                    lead.updated_at = event.created_at
+                    await dbmanager.update_lead(lead)
         except Exception as ex:
             logger.error(f'Ошибка обработки сделки: {ex}')
 
