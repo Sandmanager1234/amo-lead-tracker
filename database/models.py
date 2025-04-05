@@ -16,11 +16,11 @@ class Lead(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     pipeline_id: Mapped[int] = mapped_column(Integer())
     status_id: Mapped[str] = mapped_column(String(50))
-    poll_type: Mapped[str] = mapped_column(Integer())
-    tags_type: Mapped[str] = mapped_column(Integer())
+    poll_type: Mapped[int] = mapped_column(Integer())
+    tags_type: Mapped[int] = mapped_column(Integer())
     reject_reason: Mapped[str] = mapped_column(String(50))
-    created_at: Mapped[str] = mapped_column(Integer())
-    updated_at: Mapped[str] = mapped_column(Integer())
+    created_at: Mapped[int] = mapped_column(Integer())
+    updated_at: Mapped[int] = mapped_column(Integer())
     
     
 async def async_main():

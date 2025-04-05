@@ -50,15 +50,18 @@ dbmanager = DBManager(
 async def processing_leads(events: Events, poll_type: str):
     for event in events:
         try:
-            lead = await dbmanager.get_lead(event.entity_id)
-            if not lead or poll_type != 'tags':
+            lead_from_db = await dbmanager.get_lead(event.entity_id)
+            if not lead_from_db or poll_type != 'tags':
                 lead_json = await amo_client.get_lead(event.entity_id)
             # провекра наличие сделки в бд
             # если есть ничего не делать (добавить смену статуса в бд) по типу обработки
             # если нет +1 гугл табл (всё, что снизу) + добавить в бд
-                if lead_json:
+                if lead_json:                    
                     lead = Lead.from_json(lead_json, poll_type=poll_type)
-                    await dbmanager.add_lead(lead)
+                    if not lead_from_db:
+                        await dbmanager.add_lead(lead)
+                    else: 
+                        await dbmanager.update_lead(lead)
                     if poll_type == 'tags':
                         timestamp = lead.created_at
                     else:
@@ -105,6 +108,7 @@ async def polling_leads(timestamp):
 
 async def main():
     scheduler = Scheduler(polling_leads, SECONDS)
+    await dbmanager.create_tables()  # Создание таблиц в БД
     while True:
         try:
             await scheduler.start()
