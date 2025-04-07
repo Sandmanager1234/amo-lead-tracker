@@ -69,7 +69,8 @@ async def processing_leads(events: Events, poll_type: str):
 
                         events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
                         timestamp = events.get_timestamp_by_index()
-            
+                else:
+                    lead = lead_from_db
                 google.insert_value(*lead.get_row_col(timestamp))
             else:
                 if poll_type == 'tags':
