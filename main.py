@@ -71,7 +71,8 @@ async def processing_leads(events: Events, poll_type: str):
                         timestamp = events.get_timestamp_by_index()
                 else:
                     lead = lead_from_db
-                google.insert_value(*lead.get_row_col(timestamp))
+                    timestamp = lead.created_at
+                google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
             else:
                 if poll_type == 'tags':
                     # если сделка есть в бд, то просто обновить статус
