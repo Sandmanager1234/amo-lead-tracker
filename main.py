@@ -62,10 +62,7 @@ async def processing_leads(events: Events, poll_type: str):
                         await dbmanager.add_lead(lead)
                     else: 
                         await dbmanager.update_lead(lead)
-                    if poll_type == 'tags':
-                        timestamp = lead.created_at
-                    else:
-                        timestamp = event.created_at
+                    timestamp = lead.created_at
                     if poll_type == 'proccessing':
                         # заменить проверкой в истории бд
                         from_timestamp = int((get_current_time() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
