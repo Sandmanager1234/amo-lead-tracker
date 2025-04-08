@@ -157,6 +157,19 @@ class AmoCRMClient:
         }
         return await self.__get_events(params)
     
+    async def get_events_tags_from(self, last_timestamp: int) -> Dict[Any, Any]:
+        params = {
+            'filter[type]': 'lead_status_changed',
+            'filter[value_before][leads_statuses][0][pipeline_id]': os.getenv('astana_pipeline'),
+            'filter[value_before][leads_statuses][0][status_id]': os.getenv('status_astana_first'),
+            'filter[value_before][leads_statuses][1][pipeline_id]': os.getenv('almaty_pipeline'),
+            'filter[value_before][leads_statuses][1][status_id]': os.getenv('status_almaty_first'),
+            'filter[value_before][leads_statuses][2][pipeline_id]': os.getenv('pipeline_online'),
+            'filter[value_before][leads_statuses][2][status_id]': os.getenv('status_online_first'),
+            'filter[created_at][from]': last_timestamp
+        }
+        return await self.__get_events(params)
+    
     async def get_events_from_processing(self, last_timestamp: int) -> Dict[Any, Any]:
         params = {
             'filter[type]': 'lead_status_changed',

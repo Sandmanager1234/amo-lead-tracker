@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
-from kztime import get_current_time
+from kztime import get_timestamp_last_week
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Lead, Events
@@ -63,9 +63,11 @@ async def processing_leads(events: Events, poll_type: str):
                     else: 
                         await dbmanager.update_lead(lead)
                     timestamp = lead.created_at
+                    # if timestamp < get_timestamp_last_week():
+                    #     break
                     if poll_type == 'proccessing':
                         # заменить проверкой в истории бд
-                        from_timestamp = int((get_current_time() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
+                        from_timestamp = get_timestamp_last_week()
 
                         events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
                         timestamp = events.get_timestamp_by_index()
@@ -88,6 +90,9 @@ async def polling_leads(timestamp):
     try:
 
         tags_events = Events.from_json(await amo_client.get_events_tags(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
+        await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать
+
+        tags_events = Events.from_json(await amo_client.get_events_tags_from(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать
  
         success_events = Events.from_json(await amo_client.get_events_success(timestamp)) # завершились
