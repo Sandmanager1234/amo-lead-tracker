@@ -69,11 +69,11 @@ class Events:
     def add_event(self, event: Event):
         self.events.append(event)
 
-    def get_timestamp_by_index(self, id: int = 0):
+    def get_timestamp_by_index(self, timeestamp: int, id: int = 0):
         try:
             timestamp = self.events[id].created_at
         except:
-            timestamp = int(time.time())
+            timestamp = timestamp
         return timestamp
 
 
@@ -174,7 +174,6 @@ class Tags:
             return self
         except Exception as e:
             logger.error(f'Ошибка обработки списка событий: {e}')
-
 
 
 class Lead:

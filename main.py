@@ -70,7 +70,7 @@ async def processing_leads(events: Events, poll_type: str):
                         from_timestamp = get_timestamp_last_week()
 
                         events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
-                        timestamp = events.get_timestamp_by_index()
+                        # timestamp = events.get_timestamp_by_index()
                 else:
                     lead = lead_from_db
                     timestamp = lead.created_at

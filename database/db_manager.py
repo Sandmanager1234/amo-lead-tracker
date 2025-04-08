@@ -5,7 +5,6 @@ from .models import Base, Lead
 from amocrm.models import Lead as LeadObject
 
 
-
 class DBManager:
     def __init__(self, db_url):
         logger.info(f"Подключение к БД: {db_url}")
