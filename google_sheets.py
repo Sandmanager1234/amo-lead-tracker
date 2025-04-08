@@ -84,7 +84,6 @@ class Constructor:
 
 
 class GoogleSheets:
-
     def __init__(self):
         try:
             logger.info("Инициализация GoogleSheets")
@@ -100,18 +99,19 @@ class GoogleSheets:
         try:
             if not timestamp:
                 current_date = get_current_time()
-                time.sleep(0.2)
             else:
                 current_date = date_from_timestamp(timestamp)
             sheet_name = f'{MONTH[current_date.month]} {current_date.year}'
             ws = self.table.worksheet(sheet_name)
-            return ws
+            time.sleep(0.3)
         except gspread.WorksheetNotFound as ex:
             logger.warning(f'Лист {sheet_name} не найден. Ошибка: {ex}')
             ws = self.create_new_sheet(sheet_name)
-            return ws
         except Exception as ex:
             logger.warning(f'Ошибка получения листа: {ex}')
+            time.sleep(1)
+            ws = self.get_sheet(timestamp)
+        return ws
 
     def create_new_sheet(self, sheet_name):
         try:
@@ -162,7 +162,7 @@ class GoogleSheets:
                     "bold": True
                 }
             })
-            time.sleep(1.6)
+            time.sleep(2)
             set_frozen(ws, cols=1)
             set_column_width(ws, 'A', 200)
             return ws
@@ -176,10 +176,10 @@ class GoogleSheets:
             logger.info(f"Вставка +1 на позицию {row}:{col}")
             ws = self.get_sheet(timestamp)
             value = ws.cell(row, col).value
-            time.sleep(0.2)
+            time.sleep(0.22)
             value = int(value) if value else 0
             ws.update_cell(row, col, value + 1)
-            time.sleep(0.2)
+            time.sleep(0.22)
             logger.info("Значение успешно вставлена")
         except Exception as e:
             logger.error(f"Ошибка при вставке значения: {e}")
