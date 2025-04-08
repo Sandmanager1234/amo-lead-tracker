@@ -41,7 +41,7 @@ amo_client = AmoCRMClient(
     access_token=os.getenv("access_token"),
     client_id=os.getenv("client_id"),
     client_secret=os.getenv("client_secret"),
-    permanent_access_token=True,
+    permanent_access_token=True
 )
 dbmanager = DBManager(
     db_url=os.getenv("db_url")
@@ -84,10 +84,8 @@ async def processing_leads(events: Events, poll_type: str):
 
 
 async def polling_leads(timestamp):
-
     amo_client.start_session()
     try:
-
         tags_events = Events.from_json(await amo_client.get_events_tags(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать
 
