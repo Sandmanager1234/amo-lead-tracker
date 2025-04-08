@@ -65,10 +65,10 @@ async def processing_leads(events: Events, poll_type: str):
                     timestamp = lead.created_at
                     # if timestamp < get_timestamp_last_week():
                     #     break
-                    if poll_type == 'proccessing':
+                    # if poll_type == 'proccessing':
                         # заменить проверкой в истории бд
-                        from_timestamp = get_timestamp_last_week()
-                        events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
+                        # from_timestamp = get_timestamp_last_week()
+                        # events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
                         # timestamp = events.get_timestamp_by_index()
                 else:
                     lead = lead_from_db
