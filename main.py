@@ -76,8 +76,8 @@ async def processing_leads(events: Events, poll_type: str):
             else:
                 if poll_type == 'tags':
                     # если сделка есть в бд, то просто обновить статус
-                    lead.updated_at = event.created_at
-                    await dbmanager.update_lead(lead)
+                    lead_from_db.updated_at = event.created_at
+                    await dbmanager.update_lead(lead_from_db)
         except Exception as ex:
             logger.error(f'Ошибка обработки сделки: {ex}')
 
