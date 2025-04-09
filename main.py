@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
-from kztime import get_timestamp_last_week
+from kztime import get_local_time
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Lead, Events
@@ -62,7 +62,7 @@ async def processing_leads(events: Events, poll_type: str):
                         await dbmanager.add_lead(lead)
                     else: 
                         await dbmanager.update_lead(lead)
-                    timestamp = lead.created_at
+                    timestamp = get_local_time(lead.created_at)
                     # if timestamp < get_timestamp_last_week():
                     #     break
                     # if poll_type == 'proccessing':
@@ -72,7 +72,7 @@ async def processing_leads(events: Events, poll_type: str):
                         # timestamp = events.get_timestamp_by_index()
                 else:
                     lead = lead_from_db
-                    timestamp = lead.created_at
+                    timestamp = get_local_time(lead.created_at)
                 google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
             else:
                 if poll_type == 'tags':

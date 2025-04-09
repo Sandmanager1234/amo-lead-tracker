@@ -1,7 +1,6 @@
 import re
 import os
-import datetime
-import time
+from kztime import date_from_timestamp
 from typing import Generator
 from loguru import logger
 
@@ -194,7 +193,7 @@ class Lead:
     def get_row_col(self, timestamp: int):
         
         try:
-            row = datetime.datetime.fromtimestamp(timestamp).day + 1
+            row = date_from_timestamp(timestamp).day + 1
             pipeline_offsets = {
                 os.getenv('astana_pipeline'): 14,
                 os.getenv('almaty_pipeline'): 0,

@@ -2,7 +2,7 @@ import time
 import gspread
 from gspread_formatting import set_frozen, set_column_width
 import os
-from kztime import get_current_time, date_from_timestamp
+from kztime import date_from_timestamp, get_local_time
 from loguru import logger
 
 MONTH = {
@@ -53,7 +53,7 @@ class Constructor:
         return [first_col]
     
     def get_date_row():
-        month = str(get_current_time().month).zfill(2)
+        month = str(get_local_time().month).zfill(2)
         return [f'{str(i).zfill(2)}.{month}' for i in range(1, 32)]
     
     def get_formules_rows():
@@ -98,7 +98,7 @@ class GoogleSheets:
     def get_sheet(self, timestamp: int = None):
         try:
             if not timestamp:
-                current_date = get_current_time()
+                current_date = get_local_time()
             else:
                 current_date = date_from_timestamp(timestamp)
             sheet_name = f'{MONTH[current_date.month]} {current_date.year}'
