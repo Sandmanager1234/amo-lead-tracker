@@ -86,10 +86,10 @@ async def processing_leads(events: Events, poll_type: str):
 async def polling_leads(timestamp):
     amo_client.start_session()
     try:
+        tags_events = Events.from_json(await amo_client.get_events_new_leads(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
+        await processing_leads(tags_events, 'news') # тут нихуя не обрабатывать
+        
         tags_events = Events.from_json(await amo_client.get_events_tags(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
-        await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать
-
-        tags_events = Events.from_json(await amo_client.get_events_tags_from(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать
  
         success_events = Events.from_json(await amo_client.get_events_success(timestamp)) # завершились

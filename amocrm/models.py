@@ -204,6 +204,7 @@ class Lead:
 
             poll_type_defaults = {
                 'tags': lambda self: 3 + self.tags_type,
+                'news': lambda self: 3 + self.tags_type,
                 'success': lambda self: 11,
                 'qualified': lambda self: 8,
                 'proccessing': lambda self: 7
