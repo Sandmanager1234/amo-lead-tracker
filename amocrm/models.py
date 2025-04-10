@@ -38,6 +38,8 @@ class Event:
                     ).get(
                         'name'
                     )
+                case 'lead_added':
+                    pass
                 case _:
                     raise Exception(f'Неизвестный тип события: {self.event_type}')
 

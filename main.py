@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
-from kztime import get_local_time
+from kztime import get_local_time, get_timestamp_last_week
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Lead, Events
@@ -63,17 +63,11 @@ async def processing_leads(events: Events, poll_type: str):
                     else: 
                         await dbmanager.update_lead(lead)
                     timestamp = get_local_time(lead.created_at)
-                    # if timestamp < get_timestamp_last_week():
-                    #     break
-                    # if poll_type == 'proccessing':
-                        # заменить проверкой в истории бд
-                        # from_timestamp = get_timestamp_last_week()
-                        # events = Events.from_json(await amo_client.get_events_processing_before(lead.id, from_timestamp))
-                        # timestamp = events.get_timestamp_by_index()
                 else:
                     lead = lead_from_db
                     timestamp = get_local_time(lead.created_at)
-                google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
+                if timestamp > get_timestamp_last_week():
+                    google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
             else:
                 if poll_type == 'tags':
                     # если сделка есть в бд, то просто обновить статус
@@ -95,11 +89,12 @@ async def polling_leads(timestamp):
         success_events = Events.from_json(await amo_client.get_events_success(timestamp)) # завершились
         await processing_leads(success_events, 'success') # 
         
+        from_processing_events = Events.from_json(await amo_client.get_events_from_processing(timestamp)) # вышли из статуса в обработке
+        await processing_leads(from_processing_events, 'proccessing')
+        
         qualified_events = Events.from_json(await amo_client.get_events_qualified(timestamp)) # сделки, которые попали в статус квал и знр 
         await processing_leads(qualified_events, 'qualified')
 
-        from_processing_events = Events.from_json(await amo_client.get_events_from_processing(timestamp)) # вышли из статуса в обработке
-        await processing_leads(from_processing_events, 'proccessing')
 
     except Exception as e:
         logger.error(f'Ошибка составления запроса: {e}')
