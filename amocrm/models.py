@@ -30,6 +30,13 @@ class Event:
                     ).get(
                         'pipeline_id'
                     )
+                    self.before_value = data.get(
+                        'value_before', [{}]
+                    )[0].get(
+                        'lead_status'
+                    ).get(
+                        'pipeline_id'
+                    )
                 case 'entity_tag_added':
                     self.after_value = data.get(
                         'value_after', [{}]
@@ -70,11 +77,9 @@ class Events:
     def add_event(self, event: Event):
         self.events.append(event)
 
-    def get_timestamp_by_index(self, timeestamp: int, id: int = 0):
-        try:
+    def get_timestamp_by_index(self, timestamp: int, id: int = 0):
+        if not timestamp:
             timestamp = self.events[id].created_at
-        except:
-            timestamp = timestamp
         return timestamp
 
 
@@ -289,6 +294,24 @@ class Lead:
         except Exception as e:
             logger.error(f"Общая ошибка обработки данных: {e}")
             raise
+    
+    @classmethod
+    def from_dbmodel(cls, lead_from_db, poll_type: str) -> "Lead":
+        """Обрабатывает вкладку `Основное` в сделке."""
+        try:
+            self: Lead = cls(lead_from_db.id)
+            self.pipeline_id = str(lead_from_db.pipeline_id)
+            self.status_id = lead_from_db.status_id
+            self.tags_type = lead_from_db.tags_type
+            self.created_at = lead_from_db.created_at
+            self.updated_at = lead_from_db.updated_at
+            self.poll_type = poll_type
+            self.reject_reason = lead_from_db.reject_reason
+            return self
+        except Exception as e:
+            logger.error(f"Общая ошибка обработки данных: {e}")
+            raise
+
 
 
 if __name__ == '__main__':

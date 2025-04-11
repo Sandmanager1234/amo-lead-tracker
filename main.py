@@ -8,7 +8,7 @@ from scheduler import Scheduler
 from kztime import get_local_time, get_timestamp_last_week
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
-from amocrm.models import Lead, Events
+from amocrm.models import Lead, Events, Tag
 from database.db_manager import DBManager
 
 # Загрузка переменных из .env файла
@@ -50,29 +50,39 @@ dbmanager = DBManager(
 async def processing_leads(events: Events, poll_type: str):
     for event in events:
         try:
-            lead_from_db = await dbmanager.get_lead(event.entity_id)
-            if not lead_from_db or poll_type != 'tags':
-                lead_json = await amo_client.get_lead(event.entity_id)
-            # провекра наличие сделки в бд
-            # если есть ничего не делать (добавить смену статуса в бд) по типу обработки
-            # если нет +1 гугл табл (всё, что снизу) + добавить в бд
-                if lead_json:                    
-                    lead = Lead.from_json(lead_json, poll_type=poll_type)
-                    if not lead_from_db:
-                        await dbmanager.add_lead(lead)
-                    else: 
-                        await dbmanager.update_lead(lead)
-                    timestamp = get_local_time(lead.created_at)
+            if event.event_type != 'entity_tag_added':
+                lead_from_db = await dbmanager.get_lead(event.entity_id)
+                if not lead_from_db or (event.after_value != lead_from_db.pipeline_id and poll_type == 'tags') or poll_type != 'tags':
+                    lead_json = await amo_client.get_lead(event.entity_id)
+                # провекра наличие сделки в бд
+                # если есть ничего не делать (добавить смену статуса в бд) по типу обработки
+                # если нет +1 гугл табл (всё, что снизу) + добавить в бд
+                    if lead_json:                    
+                        lead = Lead.from_json(lead_json, poll_type=poll_type)
+                        if not lead_from_db:
+                            await dbmanager.add_lead(lead)
+                        else: 
+                            await dbmanager.update_lead(lead)
+                        timestamp = get_local_time(lead.created_at)
+                    else:
+                        lead = lead_from_db
+                        timestamp = get_local_time(lead.created_at)
+                    if timestamp > get_timestamp_last_week() and poll_type != 'news':
+                        google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
                 else:
-                    lead = lead_from_db
-                    timestamp = get_local_time(lead.created_at)
-                if timestamp > get_timestamp_last_week():
-                    google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
+                    if poll_type == 'tags':
+                        # если сделка есть в бд, то просто обновить статус
+                        lead_from_db.updated_at = event.created_at
+                        await dbmanager.update_lead(lead_from_db)
             else:
-                if poll_type == 'tags':
-                    # если сделка есть в бд, то просто обновить статус
-                    lead_from_db.updated_at = event.created_at
-                    await dbmanager.update_lead(lead_from_db)
+                lead_from_db = await dbmanager.get_lead(event.entity_id)
+                lead = Lead.from_dbmodel(lead_from_db)
+                lead.tags_type = Tag(name=event.after_value).target_type
+                lead.updated_at = event.created_at
+                await dbmanager.update_lead(lead)
+                if lead.created_at > get_timestamp_last_week():
+                    google.insert_value(*lead.get_row_col(lead.created_at), timestamp=lead.created_at)
+                
         except Exception as ex:
             logger.error(f'Ошибка обработки сделки: {ex}')
 
@@ -82,6 +92,9 @@ async def polling_leads(timestamp):
     try:
         tags_events = Events.from_json(await amo_client.get_events_new_leads(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'news') # тут нихуя не обрабатывать
+
+        tags_events = Events.from_json(await amo_client.get_events_added_tag(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
+        await processing_leads(tags_events, 'add_tag') # тут нихуя не обрабатывать
         
         tags_events = Events.from_json(await amo_client.get_events_tags(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать

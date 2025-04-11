@@ -224,3 +224,11 @@ class AmoCRMClient:
             'filter[value_before][leads_statuses][2][pipeline_id]': os.getenv('pipeline_online')
         }
         return await self.__get_events(params)
+
+    async def get_events_added_tag(self, timestamp: int):
+        params = {
+            'filter[type]': 'tag_added',
+            'filter[entity]': 'lead',
+            'filter[created_at][from]': timestamp,
+        }
+        return await self.__get_events(params)
