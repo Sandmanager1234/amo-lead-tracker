@@ -227,7 +227,7 @@ class AmoCRMClient:
 
     async def get_events_added_tag(self, timestamp: int):
         params = {
-            'filter[type]': 'tag_added',
+            'filter[type]': 'entity_tag_added',
             'filter[entity]': 'lead',
             'filter[created_at][from]': timestamp,
         }
