@@ -61,13 +61,13 @@ async def processing_leads(events: Events, poll_type: str):
                         lead = Lead.from_json(lead_json, poll_type=poll_type)
                         if not lead_from_db:
                             await dbmanager.add_lead(lead)
-                        else: 
+                        elif event.after_status != lead_from_db.status_id: 
                             await dbmanager.update_lead(lead)
                         timestamp = get_local_time(lead.created_at)
                     else:
                         lead = lead_from_db
                         timestamp = get_local_time(lead.created_at)
-                    if timestamp > get_timestamp_last_week() and poll_type != 'news':
+                    if timestamp > get_timestamp_last_week() and poll_type != 'news' and event.after_status != lead_from_db.status_id:
                         google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
                 else:
                     if poll_type == 'tags':
@@ -76,7 +76,7 @@ async def processing_leads(events: Events, poll_type: str):
                         await dbmanager.update_lead(lead_from_db)
             else:
                 lead_from_db = await dbmanager.get_lead(event.entity_id)
-                lead = Lead.from_dbmodel(lead_from_db)
+                lead = Lead.from_dbmodel(lead_from_db, poll_type)
                 lead.tags_type = Tag(name=event.after_value).target_type
                 lead.updated_at = event.created_at
                 await dbmanager.update_lead(lead)

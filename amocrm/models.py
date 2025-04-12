@@ -10,6 +10,8 @@ class Event:
         self.id: str = id
         self.entity_id : str = ''
         self.after_value : str = ''
+        self.after_status : str = ''
+        self.before_status : str = ''
         self.before_value : str = ''
         self.event_type : str = ''
         self.created_at : int = 0
@@ -36,6 +38,20 @@ class Event:
                         'lead_status'
                     ).get(
                         'pipeline_id'
+                    )
+                    self.after_status = data.get(
+                        'value_after', [{}]
+                    )[0].get(
+                        'lead_status'
+                    ).get(
+                        'status_id'
+                    )
+                    self.before_status = data.get(
+                        'value_before', [{}]
+                    )[0].get(
+                        'lead_status'
+                    ).get(
+                        'status_id'
                     )
                 case 'entity_tag_added':
                     self.after_value = data.get(
