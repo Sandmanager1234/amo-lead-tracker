@@ -67,6 +67,7 @@ async def processing_leads(events: Events, poll_type: str):
                     else:
                         lead = lead_from_db
                         timestamp = get_local_time(lead.created_at)
+                        logger.info(f'lead_from_db.poll_type = {lead_from_db.status_id}; poll_type = {poll_type}')
                     if timestamp > get_timestamp_last_week() and poll_type != 'news' and event.after_status != int(lead_from_db.status_id) and poll_type != lead_from_db.poll_type:
                         google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
                 else:
@@ -91,26 +92,26 @@ async def processing_leads(events: Events, poll_type: str):
             logger.error(f'Ошибка обработки сделки: {ex}')
 
 
-async def polling_leads(timestamp):
+async def polling_leads(from_timestamp, to_timestamp):
     amo_client.start_session()
     try:
-        logger.info(f'Запрос событий по новым сделкам. TIMESTAMP: {timestamp}. TAG: news')
-        tags_events = Events.from_json(await amo_client.get_events_new_leads(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
+        logger.info(f'Запрос событий по новым сделкам. TIMESTAMP_FROM: {from_timestamp}; TIMESTAMP_TO: {to_timestamp}. POLL_TYPE: news')
+        tags_events = Events.from_json(await amo_client.get_events_new_leads(from_timestamp, to_timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'news') # тут нихуя не обрабатывать
-        logger.info(f'Запрос событий по сделкам, к которым добавили тэг. TIMESTAMP: {timestamp}. TAG: add_tag')
-        tags_events = Events.from_json(await amo_client.get_events_added_tag(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
+        logger.info(f'Запрос событий по сделкам, к которым добавили тэг. TIMESTAMP_FROM: {from_timestamp}; TIMESTAMP_TO: {to_timestamp}. POLL_TYPE: add_tag')
+        tags_events = Events.from_json(await amo_client.get_events_added_tag(from_timestamp, to_timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'add_tag') # тут нихуя не обрабатывать
-        logger.info(f'Запрос событий по сделкам, которые пришли в первичный контакт. TIMESTAMP: {timestamp}. TAG: tags')
-        tags_events = Events.from_json(await amo_client.get_events_tags(timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
+        logger.info(f'Запрос событий по сделкам, которые пришли в первичный контакт. TIMESTAMP_FROM: {from_timestamp}; TIMESTAMP_TO: {to_timestamp}. POLL_TYPE: tags')
+        tags_events = Events.from_json(await amo_client.get_events_tags(from_timestamp, to_timestamp)) # события, которые попали в первичку (таргет, какие звонобот, и прочее) / сделки записываем в таблицу по created_at
         await processing_leads(tags_events, 'tags') # тут нихуя не обрабатывать
-        logger.info(f'Запрос событий по сделкам, которые успешно завершились. TIMESTAMP: {timestamp}. TAG: success')
-        success_events = Events.from_json(await amo_client.get_events_success(timestamp)) # завершились
+        logger.info(f'Запрос событий по сделкам, которые успешно завершились. TIMESTAMP_FROM: {from_timestamp}; TIMESTAMP_TO: {to_timestamp}. POLL_TYPE: success')
+        success_events = Events.from_json(await amo_client.get_events_success(from_timestamp, to_timestamp)) # завершились
         await processing_leads(success_events, 'success') # 
-        logger.info(f'Запрос событий по сделкам, которые вышли из обработки. TIMESTAMP: {timestamp}. TAG: proccessing')
-        from_processing_events = Events.from_json(await amo_client.get_events_from_processing(timestamp)) # вышли из статуса в обработке
+        logger.info(f'Запрос событий по сделкам, которые вышли из обработки. TIMESTAMP_FROM: {from_timestamp}; TIMESTAMP_TO: {to_timestamp}. POLL_TYPE: proccessing')
+        from_processing_events = Events.from_json(await amo_client.get_events_from_processing(from_timestamp, to_timestamp)) # вышли из статуса в обработке
         await processing_leads(from_processing_events, 'proccessing')
-        logger.info(f'Запрос событий по сделкам, которые квалифицировались. TIMESTAMP: {timestamp}. TAG: qualified')
-        qualified_events = Events.from_json(await amo_client.get_events_qualified(timestamp)) # сделки, которые попали в статус квал и знр 
+        logger.info(f'Запрос событий по сделкам, которые квалифицировались. TIMESTAMP_FROM: {from_timestamp}; TIMESTAMP_TO: {to_timestamp}. POLL_TYPE: qualified')
+        qualified_events = Events.from_json(await amo_client.get_events_qualified(from_timestamp, to_timestamp)) # сделки, которые попали в статус квал и знр 
         await processing_leads(qualified_events, 'qualified')
 
 
