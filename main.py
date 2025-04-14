@@ -86,7 +86,7 @@ async def processing_leads(events: Events, poll_type: str):
                     lead = Lead.from_json(await amo_client.get_lead(event.entity_id))
                     await dbmanager.add_lead(lead)
                 if lead.created_at > get_timestamp_last_week():
-                    google.insert_value(*lead.get_row_col(lead.created_at), timestamp=lead.created_at)
+                    google.insert_value(*lead.get_row_col(lead.created_at), timestamp=get_local_time(lead.created_at))
                 
         except Exception as ex:
             logger.error(f'Ошибка обработки сделки: {ex}')
