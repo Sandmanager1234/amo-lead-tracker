@@ -63,13 +63,12 @@ async def processing_leads(events: Events, poll_type: str):
                             await dbmanager.add_lead(lead)
                         elif event.after_status != lead_from_db.status_id: 
                             await dbmanager.update_lead(lead)
-                        timestamp = get_local_time(lead.created_at)
                     else:
                         lead = lead_from_db
-                        timestamp = get_local_time(lead.created_at)
                         logger.info(f'lead_from_db.poll_type = {lead_from_db.status_id}; poll_type = {poll_type}')
                     if timestamp > get_timestamp_last_week() and poll_type != 'news' and event.after_status != int(lead_from_db.status_id) and poll_type != lead_from_db.poll_type:
-                        google.insert_value(*lead.get_row_col(timestamp), timestamp=timestamp)
+                        timestamp = get_local_time(lead.created_at)
+                        google.insert_value(*lead.get_row_col(), timestamp=timestamp)
                 else:
                     if poll_type == 'tags':
                         # если сделка есть в бд, то просто обновить статус
@@ -86,7 +85,7 @@ async def processing_leads(events: Events, poll_type: str):
                     lead = Lead.from_json(await amo_client.get_lead(event.entity_id))
                     await dbmanager.add_lead(lead)
                 if lead.created_at > get_timestamp_last_week():
-                    google.insert_value(*lead.get_row_col(lead.created_at), timestamp=get_local_time(lead.created_at))
+                    google.insert_value(*lead.get_row_col(), timestamp=get_local_time(lead.created_at))
                 
         except Exception as ex:
             logger.error(f'Ошибка обработки сделки: {ex}')

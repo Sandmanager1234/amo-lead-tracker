@@ -1,6 +1,6 @@
 import re
 import os
-from kztime import date_from_timestamp
+from kztime import date_from_timestamp, get_local_time
 from typing import Generator
 from loguru import logger
 
@@ -213,10 +213,10 @@ class Lead:
         self.poll_type : str = ''
         self.reject_reason : str = 'не заполнено'
 
-    def get_row_col(self, timestamp: int):
+    def get_row_col(self):
         
         try:
-            row = date_from_timestamp(timestamp).day + 1
+            row = date_from_timestamp(get_local_time(self.created_at)).day + 1
             pipeline_offsets = {
                 os.getenv('astana_pipeline'): 14,
                 os.getenv('almaty_pipeline'): 0,
