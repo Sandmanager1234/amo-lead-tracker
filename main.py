@@ -48,7 +48,7 @@ dbmanager = DBManager(
 )
 
 async def processing_leads(events: Events, poll_type: str):
-    logger.info(f'Количество событий: {len(events)}')
+    logger.info(f'Количество событий: {len(events.events)}')
     for event in events:
         try:
             if event.event_type != 'entity_tag_added':
