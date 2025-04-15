@@ -14,6 +14,7 @@ from database.db_manager import DBManager
 # Загрузка переменных из .env файла
 load_dotenv()
 
+PIPES = [os.getenv('astana_pipeline'), os.getenv('almaty_pipeline'), os.getenv('pipeline_online')]
 SECONDS = int(os.getenv('seconds'))
 # Получение имени текущей директории
 current_directory_name = os.path.basename(os.getcwd())
@@ -70,9 +71,11 @@ async def processing_leads(events: Events, poll_type: str):
                     timestamp = get_local_time(lead.created_at)
                     if timestamp > get_timestamp_last_week() and poll_type != 'news' and event.after_status != int(lead_from_db.status_id if lead_from_db else '0') and poll_type != (lead_from_db.poll_type if lead_from_db else None):
                         google.insert_value(*lead.get_row_col(), timestamp=timestamp)
-                        if event.before_value in [os.getenv('astana_pipeline'), os.getenv('almaty_pipeline'), os.getenv('pipeline_online')] and event.before_value != event.after_value:
+
+                        if event.before_value in PIPES and event.after_value in PIPES and event.before_value != event.after_value:
                             lead.pipeline_id = event.before_value
                             lead.status_id = event.before_status
+                            lead.poll_type = 'tags'
                             google.minus_value(*lead.get_row_col(), timestamp=timestamp)
                 else:
                     if poll_type == 'tags':
