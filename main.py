@@ -66,8 +66,8 @@ async def processing_leads(events: Events, poll_type: str):
                     else:
                         lead = lead_from_db
                         logger.info(f'lead_from_db.poll_type = {lead_from_db.status_id}; poll_type = {poll_type}')
+                    timestamp = get_local_time(lead.created_at)
                     if timestamp > get_timestamp_last_week() and poll_type != 'news' and event.after_status != int(lead_from_db.status_id) and poll_type != lead_from_db.poll_type:
-                        timestamp = get_local_time(lead.created_at)
                         google.insert_value(*lead.get_row_col(), timestamp=timestamp)
                 else:
                     if poll_type == 'tags':
