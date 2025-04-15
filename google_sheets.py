@@ -190,8 +190,10 @@ class GoogleSheets:
             logger.info(f"Вставка -1 на позицию {row}:{col}")
             ws = self.get_sheet()
             value = ws.cell(row, col).value
+            time.sleep(0.22)
             value = int(value) if value else 0
             ws.update_cell(row, col, value - 1)
+            time.sleep(0.22)
             logger.info("Значение успешно вставлена")
         except Exception as e:
             logger.error(f"Ошибка при вставке значения: {e}")

@@ -70,6 +70,10 @@ async def processing_leads(events: Events, poll_type: str):
                     timestamp = get_local_time(lead.created_at)
                     if timestamp > get_timestamp_last_week() and poll_type != 'news' and event.after_status != int(lead_from_db.status_id) and poll_type != lead_from_db.poll_type:
                         google.insert_value(*lead.get_row_col(), timestamp=timestamp)
+                        if event.before_value in [os.getenv('astana_pipeline'), os.getenv('almaty_pipeline'), os.getenv('pipeline_online')] and event.before_value != event.after_value:
+                            lead.pipeline_id = event.before_value
+                            lead.status_id = event.before_status
+                            google.minus_value(*lead.get_row_col(), timestamp=timestamp)
                 else:
                     if poll_type == 'tags':
                         # если сделка есть в бд, то просто обновить статус
