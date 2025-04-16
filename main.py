@@ -15,6 +15,8 @@ from database.db_manager import DBManager
 load_dotenv()
 
 PIPES = [os.getenv('astana_pipeline'), os.getenv('almaty_pipeline'), os.getenv('pipeline_online')]
+PROCESSING_STATUSES = [os.getenv('status_astana_processing'), os.getenv('status_almaty_processing'), os.getenv('status_online_processing')]
+FIRST_STATUSES = [os.getenv('status_online_first'), os.getenv('status_astana_first'), os.getenv('status_almaty_first')]
 SECONDS = int(os.getenv('seconds'))
 # Получение имени текущей директории
 current_directory_name = os.path.basename(os.getcwd())
@@ -69,10 +71,17 @@ async def processing_leads(events: Events, poll_type: str):
                         lead = lead_from_db
                         logger.info(f'lead_from_db.poll_type = {(lead_from_db.status_id if lead_from_db else 0)}; poll_type = {poll_type}')
                     timestamp = get_local_time(lead.created_at)
-                    if timestamp > get_timestamp_last_week() and poll_type != 'news' and event.after_status != int(lead_from_db.status_id if lead_from_db else '0') and poll_type != (lead_from_db.poll_type if lead_from_db else None):
+
+                    is_last_week = timestamp > get_timestamp_last_week()
+                    is_not_news = poll_type != 'news'
+                    is_status_not_same = event.after_status != int(lead_from_db.status_id if lead_from_db else '0')
+                    is_poll_type_not_same = poll_type != (lead_from_db.poll_type if lead_from_db else None)
+                    is_proccessing_not_go_in_first = not (str(event.before_status) in PROCESSING_STATUSES and str(event.after_status) in FIRST_STATUSES and event.after_value == event.before_value)
+
+                    if is_last_week and is_not_news and is_status_not_same and is_poll_type_not_same and is_proccessing_not_go_in_first:
                         google.insert_value(*lead.get_row_col(), timestamp=timestamp)
 
-                        if event.before_value in PIPES and event.after_value in PIPES and event.before_value != event.after_value:
+                        if str(event.before_value) in PIPES and str(event.after_value) in PIPES and event.before_value != event.after_value:
                             lead.pipeline_id = event.before_value
                             lead.status_id = event.before_status
                             lead.poll_type = 'tags'
@@ -86,7 +95,14 @@ async def processing_leads(events: Events, poll_type: str):
                 lead_from_db = await dbmanager.get_lead(event.entity_id)
                 if lead_from_db:
                     lead = Lead.from_dbmodel(lead_from_db, poll_type)
-                    lead.tags_type = Tag(name=event.after_value).target_type
+                    added_tag = Tag(name=event.after_value)
+                    if lead.tags_type:
+                        if lead.tags_type > added_tag.target_type:
+                            google.minus_value(*lead.get_row_col(), timestamp=get_local_time(lead.created_at))
+                            lead.tags_type = added_tag.target_type
+                            google.insert_value(*lead.get_row_col(), timestamp=get_local_time(lead.created_at))
+                    else:
+                        google.insert_value(*lead.get_row_col(), timestamp=get_local_time(lead.created_at))    
                     lead.updated_at = event.created_at
                     await dbmanager.update_lead(lead)
                 else:
