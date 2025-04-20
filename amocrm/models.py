@@ -3,6 +3,10 @@ import os
 from kztime import date_from_timestamp, get_local_time
 from typing import Generator
 from loguru import logger
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 
 class Event:

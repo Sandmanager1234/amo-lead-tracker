@@ -1,9 +1,13 @@
+import os
 import time
 import gspread
+from dotenv import load_dotenv
 from gspread_formatting import set_frozen, set_column_width
-import os
 from kztime import date_from_timestamp, get_local_time
 from loguru import logger
+
+
+load_dotenv()
 
 MONTH = {
     1: 'Январь',
