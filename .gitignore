@@ -10,3 +10,4 @@ jsons
 lead_ids.json
 *.db
 *.xlsx
+backup.py

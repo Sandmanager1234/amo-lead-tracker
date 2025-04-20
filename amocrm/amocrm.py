@@ -238,3 +238,17 @@ class AmoCRMClient:
             'filter[created_at][to]': to_timestamp
         }
         return await self.__get_events(params)
+    
+    async def get_leads(self, today_ts: int, pipeline_ids: list, page: int = 1):
+        params = {
+            'with': 'tags',
+            'filter[created_at][from]': today_ts,
+            'page': page
+        }
+        for i, pipeline_id in enumerate(pipeline_ids):
+            params[f'filter[pipeline_id][{i}]'] = pipeline_id
+        return await self._make_request("GET", f"/api/v4/leads", params=params)
+
+    
+
+    

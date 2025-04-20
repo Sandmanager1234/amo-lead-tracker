@@ -202,19 +202,31 @@ class Lead:
     id : int
     pipeline_id : str
     status_id : str
-    poll_type : str
+    poll_type : str = 'tags'
     tags_type : int
     reject_reason : str
+    is_qual : bool = False
+    is_after_processing : bool = False
+    is_success : bool = False
     created_at : int
     updated_at : int
+
+    after_processing_statuses = {
+        os.getenv('astana_pipeline'): ['62970105', '62970109', '62970113'],
+        os.getenv('almaty_pipeline'): ['63909053', '63909057', '63909061'],
+        os.getenv('pipeline_online'): ['68601325', '68601329', '68601333']
+    }
+    success_pipes = [os.getenv('pipeline_astana_success'), os.getenv('pipeline_almaty_success')]
+
+
+
 
     def __init__(self, id: str):
         self.id = id
         self.poll_type : str = ''
         self.reject_reason : str = 'не заполнено'
 
-    def get_row_col(self):
-        
+    def get_row_col(self):      
         try:
             row = date_from_timestamp(get_local_time(self.created_at)).day + 1
             pipeline_offsets = {
@@ -286,7 +298,7 @@ class Lead:
         
     # добавить created_at
     @classmethod
-    def from_json(cls, data: dict, poll_type: str) -> "Lead":
+    def from_json(cls, data: dict) -> "Lead":
         """Обрабатывает вкладку `Основное` в сделке."""
         try:
             self: Lead = cls(data.get("id", ""))
@@ -296,7 +308,6 @@ class Lead:
             self.created_at = data.get('created_at', 0)
             self.updated_at = data.get('updated_at', 0)
             
-            self.poll_type = poll_type
             fields = data.get("custom_fields_values", []) if data.get("custom_fields_values", []) else []
             for field in fields:
                 match field.get("field_name", None):
@@ -304,6 +315,17 @@ class Lead:
                         self.reject_reason = self.__get_value_from_json(field)
                     case _:
                         continue
+            if self.pipeline_id in self.success_pipes or self.status_id == os.getenv('status_online_success'):
+                self.is_success = True
+
+            if (self.status_id not in self.after_processing_statuses.get(self.pipeline_id, []) or self.is_success):
+                self.is_after_processing = True
+            
+            if (self.status_id not in self.after_processing_statuses.get(self.pipeline_id, [])
+                and 
+                self.reject_reason in ['Передумали', 'Не одобрили рассрочку', 'не заполнено']):
+                self.is_qual = True
+
             return self
         except KeyError as e:
             logger.error(f"Ключ не найден в данных: {e}")
@@ -328,6 +350,79 @@ class Lead:
         except Exception as e:
             logger.error(f"Общая ошибка обработки данных: {e}")
             raise
+
+
+class Leads:
+
+    offset = {
+        'almaty': 0,
+        'astana': 14,
+        'online': 28
+    }
+
+    def __init__(self):
+        self.leads : list[Lead] = []
+        self.count = len(self.leads)
+
+    def __iter__(self) -> Generator[Lead, None, None]:
+        for lead in self.leads:
+            yield lead
+
+    def add_leads(self, leads: 'Leads'):
+        self.leads.extend(leads.leads)
+        self.count += leads.count
+
+    def add_lead(self, lead: Lead):
+        self.leads.append(lead)
+        self.count += 1
+
+    def get_target_count(self):
+        return len(list(filter(lambda x: x.tags_type == 0, self.leads)))
+    
+    def get_zvonobot_count(self):
+        return len(list(filter(lambda x: x.tags_type == 1, self.leads)))
+    
+    def get_other_count(self):
+        return len(list(filter(lambda x: x.tags_type == 2, self.leads)))
+    
+    def get_after_processing_count(self):
+        return len(list(filter(lambda x: x.is_after_processing == True, self.leads)))
+    
+    def get_qual_count(self):
+        return len(list(filter(lambda x: x.is_qual == True, self.leads)))
+    
+    def get_success_count(self):
+        return len(list(filter(lambda x: x.is_success == True, self.leads)))
+    
+    def get_all(self, pipeline: str, today_ts: int):
+        values = [self.get_target_count(), self.get_zvonobot_count(), self.get_other_count()]
+        col = date_from_timestamp(get_local_time(today_ts)).day + 1
+        row = 3 + self.offset[pipeline]
+        return row, col, values
+    
+    def get_ap_qual(self, pipeline: str, today_ts: int):
+        values = [self.get_after_processing_count(), self.get_qual_count()]
+        col = date_from_timestamp(get_local_time(today_ts)).day + 1
+        row = 7 + self.offset[pipeline]
+        return row, col, values
+    
+    def get_success(self, pipeline: str, today_ts: int):
+        values = [self.get_success_count()]
+        col = date_from_timestamp(get_local_time(today_ts)).day + 1
+        row = 11 + self.offset[pipeline]
+        return row, col, values
+
+    @classmethod
+    def from_json(cls, data: dict):
+        try:
+            self : Leads = cls()  
+            leads_json = data.get('_embedded', {}).get('leads', [])
+            for lead_json in leads_json:
+                self.add_lead(Lead.from_json(lead_json))
+            return self
+        except Exception as e:
+            logger.error(f'Ошибка обработки списка сделок: {e}')
+
 
 
 

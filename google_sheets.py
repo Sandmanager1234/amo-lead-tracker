@@ -198,3 +198,11 @@ class GoogleSheets:
         except Exception as e:
             logger.error(f"Ошибка при вставке значения: {e}")
             raise
+
+    def insert_val(self, row, col, values, today_ts):
+        ws = self.get_sheet(today_ts)
+        for value in values:
+            ws.update_cell(row, col, value)
+            time.sleep(0.22)
+            row += 1
+        

@@ -18,3 +18,9 @@ def get_local_time(ts: int = None) -> int | datetime:
 
 def get_timestamp_last_week() -> int:
     return int((get_unix_dt() - timedelta(weeks=1)).replace(hour=0, minute=0, microsecond=0, second=0).timestamp()) 
+
+def get_today(t: int):
+    dt = date_from_timestamp(t)
+    dt.replace(hour=0, microsecond=0, minute=0, second=0)
+    return dt.timestamp()
+
