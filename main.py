@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
-from kztime import get_local_time, get_today
+from kztime import get_local_time, get_today, get_last_week_list
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Leads
@@ -54,25 +54,37 @@ amo_client = AmoCRMClient(
 
 
 async def polling_pipelines(last_update: int):
-    today = get_today(last_update)
-    for pipeline in PIPES:
-        try:
-            page = 1
-            response = await amo_client.get_leads(today, PIPES[pipeline])
-            leads = Leads.from_json(response)
-            next = response.get('_links', {}).get('next')
-            while next:
-                response = await amo_client.get_leads(today, PIPES[pipeline])
-                leads.add_leads(Leads.from_json(await amo_client.get_leads(today, PIPES[pipeline], page)))
-                next = response.get('_links', {}).get('next')
-            
-            local_today = get_local_time(local_today)
-            google.insert_val(*leads.get_all(pipeline, today), local_today)
-            google.insert_val(leads.get_ap_qual(pipeline, today), local_today)
-            google.insert_val(leads.get_success(pipeline, today), local_today)
-            
-        except Exception as ex:
-            logger.error(f'Ошибка обработки воронки: {ex}')
+    amo_client.start_session()
+    # today = get_today(last_update)
+    week = get_last_week_list(last_update)
+    # 189 requests to Google Sheets per minute
+    for day in week:
+        end_day = day + 86399
+        logger.info(f'Сбор данных за day: {day}')
+        # 27 requests to Google Sheets per minute
+        for pipeline in PIPES:
+            try:
+                page = 1
+                response = await amo_client.get_leads(day, end_day, PIPES[pipeline])
+                if response:
+                    leads = Leads.from_json(response)
+                    next = response.get('_links', {}).get('next')
+                    while next:
+                        page += 1
+                        response = await amo_client.get_leads(day, end_day, PIPES[pipeline], page)
+                        if response:
+                            leads.add_leads(Leads.from_json(response))
+                            next = response.get('_links', {}).get('next')
+
+                    local_today = get_local_time(day)   
+                    # 9 req
+                    google.insert_val(*leads.get_all(pipeline, day), local_today) # 4 запроса
+                    google.insert_val(*leads.get_ap_qual(pipeline, day), local_today) # 3 req
+                    google.insert_val(*leads.get_success(pipeline, day), local_today) # 2 req
+                
+            except Exception as ex:
+                logger.error(f'Ошибка обработки воронки: {ex}')
+    await amo_client.close_session()
 
 
 async def main():
@@ -85,10 +97,9 @@ async def main():
             logger.error(f'Ошибка: {ex}')
         finally:
             await scheduler.stop()
-            
+
 
 # Запуск приложения
 if __name__ == "__main__":
-    
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())

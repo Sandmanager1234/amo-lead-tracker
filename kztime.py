@@ -21,6 +21,15 @@ def get_timestamp_last_week() -> int:
 
 def get_today(t: int):
     dt = date_from_timestamp(t)
-    dt.replace(hour=0, microsecond=0, minute=0, second=0)
-    return dt.timestamp()
+    today = dt.replace(hour=0, microsecond=0, minute=0, second=0)
+    return int(today.timestamp() - 18000)
 
+def get_last_week_list(t) -> list:
+    week = []
+    td = get_today(t)
+    week.append(td)
+    for _ in range(7):
+        yesterday = td - 86400
+        td = yesterday
+        week.append(yesterday)
+    return week

@@ -203,6 +203,7 @@ class GoogleSheets:
         ws = self.get_sheet(today_ts)
         for value in values:
             ws.update_cell(row, col, value)
+            logger.info(f'Запись обновлена на позиции {row}:{col}')
             time.sleep(0.22)
             row += 1
         

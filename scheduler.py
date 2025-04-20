@@ -28,8 +28,8 @@ class Scheduler:
 
     async def _run(self):
         while True:
-            from_timestamp, to_timestamp = await self._get_and_update_timestamp()
-            await self.func(from_timestamp, to_timestamp)
+            from_timestamp = await self._get_and_update_timestamp()
+            await self.func(from_timestamp)
             await asyncio.sleep(self.time)
     
     async def _get_and_update_timestamp(self) -> int:
@@ -42,7 +42,7 @@ class Scheduler:
             timestamp = int(get_unix_dt().timestamp())
             async with aiofiles.open(self._filename, 'w') as file:
                 await file.write(str(timestamp))
-        return curr_timestamp, timestamp
+        return curr_timestamp
     
 
 if __name__ == '__main__':

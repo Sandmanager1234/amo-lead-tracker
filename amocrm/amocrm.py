@@ -239,10 +239,11 @@ class AmoCRMClient:
         }
         return await self.__get_events(params)
     
-    async def get_leads(self, today_ts: int, pipeline_ids: list, page: int = 1):
+    async def get_leads(self, start_day: int, end_day: int, pipeline_ids: list, page: int = 1):
         params = {
             'with': 'tags',
-            'filter[created_at][from]': today_ts,
+            'filter[created_at][from]': start_day,
+            'filter[created_at][to]': end_day,
             'page': page
         }
         for i, pipeline_id in enumerate(pipeline_ids):
