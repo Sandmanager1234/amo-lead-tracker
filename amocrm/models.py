@@ -147,7 +147,7 @@ class Tag:
             regex_letters = []
             for letter in lower_tag:
                 regex_letters.append(f'{letter}{letter.upper()}')
-            regex_word = f'[{"][".join(regex_letters)}]'
+            regex_word = f'^[{"][".join(regex_letters)}]'
             regex_list.append(regex_word)
         return '|'.join(regex_list)
     
