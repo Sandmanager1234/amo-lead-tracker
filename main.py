@@ -1,11 +1,10 @@
 import os
 import asyncio
-from datetime import timedelta
 from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
-from kztime import get_local_time, get_today, get_last_week_list
+from kztime import get_local_time, get_last_week_list
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Leads
@@ -15,13 +14,21 @@ from amocrm.models import Leads
 load_dotenv()
 
 PIPES = {
-    'astana': [os.getenv('astana_pipeline'), os.getenv('pipeline_astana_success')], 
-    'almaty': [os.getenv('almaty_pipeline'), os.getenv('pipeline_almaty_success')], 
-    'online': [os.getenv('pipeline_online')]
+    "astana": [os.getenv("astana_pipeline"), os.getenv("pipeline_astana_success")],
+    "almaty": [os.getenv("almaty_pipeline"), os.getenv("pipeline_almaty_success")],
+    "online": [os.getenv("pipeline_online")],
 }
-PROCESSING_STATUSES = [os.getenv('status_astana_processing'), os.getenv('status_almaty_processing'), os.getenv('status_online_processing')]
-FIRST_STATUSES = [os.getenv('status_online_first'), os.getenv('status_astana_first'), os.getenv('status_almaty_first')]
-SECONDS = int(os.getenv('seconds'))
+PROCESSING_STATUSES = [
+    os.getenv("status_astana_processing"),
+    os.getenv("status_almaty_processing"),
+    os.getenv("status_online_processing"),
+]
+FIRST_STATUSES = [
+    os.getenv("status_online_first"),
+    os.getenv("status_astana_first"),
+    os.getenv("status_almaty_first"),
+]
+SECONDS = int(os.getenv("seconds"))
 
 # Получение имени текущей директории
 current_directory_name = os.path.basename(os.getcwd())
@@ -49,7 +56,7 @@ amo_client = AmoCRMClient(
     access_token=os.getenv("access_token"),
     client_id=os.getenv("client_id"),
     client_secret=os.getenv("client_secret"),
-    permanent_access_token=True
+    permanent_access_token=True,
 )
 
 
@@ -60,7 +67,7 @@ async def polling_pipelines(last_update: int):
     # 189 requests to Google Sheets per minute
     for day in week:
         end_day = day + 86399
-        logger.info(f'Сбор данных за day: {day}')
+        logger.info(f"Сбор данных за day: {day}")
         # 27 requests to Google Sheets per minute
         for pipeline in PIPES:
             try:
@@ -68,22 +75,30 @@ async def polling_pipelines(last_update: int):
                 response = await amo_client.get_leads(day, end_day, PIPES[pipeline])
                 if response:
                     leads = Leads.from_json(response)
-                    next = response.get('_links', {}).get('next')
+                    next = response.get("_links", {}).get("next")
                     while next:
                         page += 1
-                        response = await amo_client.get_leads(day, end_day, PIPES[pipeline], page)
+                        response = await amo_client.get_leads(
+                            day, end_day, PIPES[pipeline], page
+                        )
                         if response:
                             leads.add_leads(Leads.from_json(response))
-                            next = response.get('_links', {}).get('next')
+                            next = response.get("_links", {}).get("next")
 
-                    local_today = get_local_time(day)   
+                    local_today = get_local_time(day)
                     # 9 req
-                    google.insert_val(*leads.get_all(pipeline, day), local_today) # 4 запроса
-                    google.insert_val(*leads.get_ap_qual(pipeline, day), local_today) # 3 req
-                    google.insert_val(*leads.get_success(pipeline, day), local_today) # 2 req
-                
+                    google.insert_val(
+                        *leads.get_all(pipeline, day), local_today
+                    )  # 4 запроса
+                    google.insert_val(
+                        *leads.get_ap_qual(pipeline, day), local_today
+                    )  # 3 req
+                    google.insert_val(
+                        *leads.get_success(pipeline, day), local_today
+                    )  # 2 req
+
             except Exception as ex:
-                logger.error(f'Ошибка обработки воронки: {ex}')
+                logger.error(f"Ошибка обработки воронки: {ex}")
     await amo_client.close_session()
 
 
@@ -94,7 +109,7 @@ async def main():
             await scheduler.start()
             await asyncio.sleep(600)
         except Exception as ex:
-            logger.error(f'Ошибка: {ex}')
+            logger.error(f"Ошибка: {ex}")
         finally:
             await scheduler.stop()
 

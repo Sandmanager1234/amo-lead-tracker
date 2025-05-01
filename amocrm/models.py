@@ -127,6 +127,7 @@ class Tag:
         'звонобот',
         'zvonobot'
     ]
+    other_city = ['Другой_город']
 
     def __init__(self, name: str):
         self.name = name
@@ -137,8 +138,11 @@ class Tag:
             return 0
         elif self.is_zvonobot():
             return 1
-        else:
+        elif self.is_other_city():
+            return 3
+        else: 
             return 2
+        
 
     def __get_regex(self, tags):
         regex_list = []
@@ -157,11 +161,17 @@ class Tag:
     def _get_zvonobot_regex_tags(self):
         return self.__get_regex(self.zvonobot_tags)
     
+    def _get_other_city_regex_tags(self):
+        return self.__get_regex(self.other_city)
+    
     def is_target(self):
         return bool(re.search(self._get_target_regex_tags(), self.name))
     
     def is_zvonobot(self):
         return bool(re.search(self._get_zvonobot_regex_tags(), self.name))
+    
+    def is_other_city(self):
+        return bool(re.search(self._get_other_city_regex_tags(), self.name))
 
     @classmethod
     def from_json(cls, data: dict):
@@ -379,6 +389,13 @@ class Leads:
     def add_lead(self, lead: Lead):
         self.leads.append(lead)
         self.count += 1
+
+    # Фильтры
+    def count_all(self):
+        return len(self.leads)
+    
+    def count_other_city(self):
+        return len(tuple(filter(lambda x: x.tags_type == 3, self.leads)))
 
     def get_target_count(self):
         return len(list(filter(lambda x: x.tags_type == 0, self.leads)))
