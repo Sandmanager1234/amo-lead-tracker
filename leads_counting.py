@@ -6,9 +6,9 @@ def get_total(leads: LeadsResponse):
     total = {
         "all": 0,
         "target": 0,
+        "other_city": 0,
         "zvonobot": 0,
         "other": 0,
-        "other_city": 0
     }
     
     for lead in leads.leads:
@@ -29,9 +29,9 @@ def get_processed(leads: LeadsResponse):
     total_processed = {
         "all": 0,
         "target": 0,
+        "other_city": 0,
         "zvonobot": 0,
-        "other": 0,
-        "other_city": 0
+        "other": 0
     }
 
     for lead in leads.leads:
@@ -53,9 +53,9 @@ def get_qualified(leads: LeadsResponse):
     total_qualified = {
         "all": 0,
         "target": 0,
+        "other_city": 0,
         "zvonobot": 0,
         "other": 0,
-        "other_city": 0
     }
 
     for lead in leads.leads:

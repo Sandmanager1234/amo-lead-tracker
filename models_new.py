@@ -93,7 +93,7 @@ class Lead(BaseModel):
                 break
         return values
 
-    # Compited_fields
+    # Computed_fields
 
     @computed_field
     @property

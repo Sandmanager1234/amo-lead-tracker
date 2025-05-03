@@ -1,5 +1,4 @@
 import datetime as dt
-import json
 import os
 
 from loguru import logger
@@ -8,7 +7,21 @@ from amocrm.amocrm import AmoCRMClient
 
 from leads_counting import get_processed, get_qualified, get_success, get_total
 from models_new import LeadsResponse
+from sheets_new import SheetWorker, get_letter_by_timestamp, get_range_by_pipeline
+from time_new import (
+    get_today,
+    get_tomorrow,
+    get_week_timestamps,
+    KZ_TIMEZONE,
+)
 
+current_directory_name = os.path.basename(os.getcwd())
+
+os.makedirs(".", exist_ok=True)  # Создание папки logs, если её нет
+
+log_file_path = os.path.join(
+    "logs", f"{current_directory_name}_{{time:YYYY-MM-DD}}.log"
+)
 
 amo_client = AmoCRMClient(
     base_url="https://teslakz.amocrm.ru",
@@ -18,78 +31,126 @@ amo_client = AmoCRMClient(
     permanent_access_token=True,
 )
 
+logger.add(
+    log_file_path,  # Файл лога будет называться по дате и сохраняться в поддиректории с названием текущей директории
+    rotation="00:00",  # Ротация каждый день в полночь
+    retention="7 days",  # Хранение логов за последние 7 дней
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",  # Формат сообщений в файле
+    level="DEBUG",  # Минимальный уровень логирования
+    compression="zip",  # Архивирование старых логов
+)
 
-def get_yesterday():
-    kz_timezone = dt.timezone(dt.timedelta(hours=5))
-    yesterday = (dt.datetime.now(kz_timezone) - dt.timedelta(days=1)).replace(
-        hour=0, minute=0, second=0, microsecond=0
+
+async def polling_pipeline(
+    pipeline_id: list, ts_from: int = get_today(), ts_to: int = get_tomorrow()
+):
+    
+
+    logger.info(
+        f"Сбор данных для воронки: {pipeline_id} за {dt.datetime.fromtimestamp(ts_from, tz=KZ_TIMEZONE).date()}"
     )
-    return int(yesterday.timestamp())
-
-
-def get_today():
-    kz_timezone = dt.timezone(dt.timedelta(hours=5))
-    today = dt.datetime.now(kz_timezone).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    return int(today.timestamp())
-
-
-def get_tomorrow():
-    kz_timezone = dt.timezone(dt.timedelta(hours=5))
-    tomorrow = (dt.datetime.now(kz_timezone) + dt.timedelta(days=1)).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    return int(tomorrow.timestamp())
-
-
-async def polling_pipeline(pipeline_id: int):
-    amo_client.start_session()
-
-    logger.info(f"Сбор данных для воронки: {pipeline_id} за сегодня")
     try:
-        
-        # response = await amo_client.get_leads(
-        #     get_today(), get_tomorrow(), [pipeline_id]
-        # )
+        data = {}
 
-        response = await amo_client.get_leads(
-            1743457200, 1743543600, [pipeline_id]
-        )
-
-        print(
-            json.dumps(response, indent=4, ensure_ascii=False),
-            file=open("response.txt", "w", encoding="utf-8"),
-        )
+        response = await amo_client.get_leads(ts_from, ts_to, pipeline_id)
 
         if response:
             parsed = LeadsResponse.model_validate(response)
 
-            print(f"Общее: {get_total(parsed)}")
-            print(f'Обработано: {get_processed(parsed)}')
-            print(f'Квалифицировано: {get_qualified(parsed)}')
-            print(f"Успешно: {get_success(parsed)}")  
+            data = {
+                "total": get_total(parsed),
+                "processed": get_processed(parsed),
+                "qualified": get_qualified(parsed),
+                "success": get_success(parsed),
+            }
 
-            # for lead in parsed.leads:
-            #     print()
-            #     print(
-            #         f"ID: {lead.id}, Создан: {lead.created_at}, Статус: {lead.status_id}"
-            #     )
-            #     print(
-            #         f"Reject reason: {lead.reject_reason}, Success: {lead.is_success}, After processing: {lead.is_after_processing}, Qualified: {lead.is_qualified}"
-            #     )
-            #     for tag in lead.tags:
-            #         print(f"  {tag.name} — тип: {tag.type}")
+        return data
 
     except Exception as ex:
         logger.error(f"Ошибка обработки воронки: {ex.with_traceback()}")
         return
     finally:
-        await amo_client.close_session()
+        pass
+
+
+async def worker():
+    sheet = SheetWorker()
+
+    PIPES = {
+        "astana": [os.getenv("astana_pipeline"), os.getenv("pipeline_astana_success")],
+        "almaty": [os.getenv("almaty_pipeline"), os.getenv("pipeline_almaty_success")],
+        "online": [os.getenv("pipeline_online"), os.getenv("pipeline_online_success")],
+    }
+
+    logger.info(f"Проход по воронкам за неделю: до {dt.date.today()}")
+
+    amo_client.start_session()
+
+    for day in get_week_timestamps():
+        logger.info(
+            f"Сбор данных за : {dt.datetime.fromtimestamp(day[0], tz=KZ_TIMEZONE)}"
+        )
+
+        tasks = [
+            asyncio.create_task(polling_pipeline(pipes, day[0], day[1]))
+            for pipes in PIPES.values()
+        ]
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    
+
+        for (pipes_name, _), data_total in zip(PIPES.items(), results):
+            if isinstance(data_total, Exception):
+                logger.error(f"Ошибка обработки воронки {pipes_name}: {data_total}")
+                continue
+
+            if not data_total:
+                continue
+
+            logger.info(
+                f"Обновление данных в Google Sheets для {pipes_name} за {dt.datetime.fromtimestamp(day[0], tz=KZ_TIMEZONE)}"
+            )
+            sheet.insert_col(
+                data_total,
+                get_range_by_pipeline(pipes_name),
+                get_letter_by_timestamp(day[0]),
+                sheet="Лист1",
+                include_other_city=(pipes_name == "online"),
+            )
+
+    await amo_client.close_session()
+        # for pipes_name, pipes in PIPES.items():
+        #     logger.info(f"Проход по воронкам {pipes_name} ")
+        #     data_total = await polling_pipeline(pipes, day[0], day[1])
+
+        #     logger.success(data_total)
+
+        #     if data_total:
+        #         logger.info(
+        #             f"Обновление данных в Google Sheets для {pipes_name} за {dt.datetime.fromtimestamp(day[0], tz=KZ_TIMEZONE).date()}"
+        #         )
+
+        #         sheet.insert_col(
+        #             data_total,
+        #             get_range_by_pipeline(pipes_name),
+        #             get_letter_by_timestamp(day[0]),
+        #             sheet="Лист1",
+        #             include_other_city=True if pipes_name == "online" else False,
+        #         )
+
+async def simple_scheduler():
+    while True:
+        try:
+            
+            await worker()
+            logger.info("Завершаем работу на 5 минут")
+            await asyncio.sleep(60 * 5)
+        except Exception as ex:
+            logger.error(f"Ошибка: {ex.with_traceback()}")
 
 
 if __name__ == "__main__":
     import asyncio
 
-    pipeline_id = 7747517
-    asyncio.run(polling_pipeline(pipeline_id))
+    asyncio.run(simple_scheduler())
