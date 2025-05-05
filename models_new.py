@@ -3,6 +3,8 @@ from typing import Optional, List
 from loguru import logger
 from pydantic import BaseModel, Field, computed_field, model_validator, ConfigDict
 
+from debug import TagCollector
+
 # Ключевые слова для определения типа тега
 TARGET_KEYWORDS = [
     "ss",
@@ -47,9 +49,10 @@ class Tag(BaseModel):
             return "other"
 
         name_lower = self.name.lower()
-        if any(keyword in name_lower for keyword in TARGET_KEYWORDS):
+        # TagCollector().add_tag(self.name) - debug line
+        if any(keyword.lower() in name_lower for keyword in TARGET_KEYWORDS):
             return "target"
-        elif any(keyword in name_lower for keyword in ZVONOBOT_KEYWORDS):
+        elif any(keyword.lower() in name_lower for keyword in ZVONOBOT_KEYWORDS):
             return "zvonobot"
         elif name_lower == "другой_город":
             return "other_city"

@@ -2,9 +2,10 @@ import datetime as dt
 import os
 
 from loguru import logger
-
+from dotenv import load_dotenv
 from amocrm.amocrm import AmoCRMClient
 
+from debug import TagCollector
 from leads_counting import get_processed, get_qualified, get_success, get_total
 from models_new import LeadsResponse
 from sheets_new import SheetWorker, get_letter_by_timestamp, get_range_by_pipeline
@@ -14,6 +15,8 @@ from time_new import (
     get_week_timestamps,
     KZ_TIMEZONE,
 )
+
+load_dotenv()
 
 current_directory_name = os.path.basename(os.getcwd())
 
@@ -64,10 +67,12 @@ async def polling_pipeline(
                 "success": get_success(parsed),
             }
 
+            # print(*TagCollector().show_all_tags(), end='\n', sep='\n', file=open("tags.txt", "a+", encoding="utf-8")) - debug line
+
         return data
 
     except Exception as ex:
-        logger.error(f"Ошибка обработки воронки: {ex.with_traceback()}")
+        logger.error(f"Ошибка обработки воронки: {ex}", exc_traceback=True)
         return
     finally:
         pass
@@ -142,7 +147,7 @@ async def worker():
 async def simple_scheduler():
     while True:
         try:
-            
+
             await worker()
             logger.info("Завершаем работу на 5 минут")
             await asyncio.sleep(60 * 5)

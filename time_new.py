@@ -1,6 +1,6 @@
 import datetime as dt
 
-KZ_TIMEZONE = dt.timezone(dt.timedelta(hours=6))
+KZ_TIMEZONE = dt.timezone(dt.timedelta(hours=5))
 
 def get_week_timestamps():
     now_kz = dt.datetime.now(tz=KZ_TIMEZONE)
