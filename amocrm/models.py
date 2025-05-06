@@ -4,7 +4,7 @@ from kztime import date_from_timestamp, get_local_time
 from typing import Generator
 from loguru import logger
 from dotenv import load_dotenv
-
+from google_sheets import LETTERS
 
 load_dotenv()
 
@@ -133,9 +133,9 @@ class Tag:
         self.target_type = self.__get_target_type()
 
     def __get_target_type(self):
-        if self.is_target():
+        if self.is_target:
             return 0
-        elif self.is_zvonobot():
+        elif self.is_zvonobot:
             return 1
         else:
             return 2
@@ -157,11 +157,17 @@ class Tag:
     def _get_zvonobot_regex_tags(self):
         return self.__get_regex(self.zvonobot_tags)
     
+    @property
     def is_target(self):
         return bool(re.search(self._get_target_regex_tags(), self.name))
     
+    @property
     def is_zvonobot(self):
         return bool(re.search(self._get_zvonobot_regex_tags(), self.name))
+    
+    @property
+    def is_other_city(self):
+        return self.name == 'Другой город'
 
     @classmethod
     def from_json(cls, data: dict):
@@ -185,7 +191,7 @@ class Tags:
         self.tags.append(tag)
     
     def get_type(self):
-        target_type = 2
+        target_type = 3
         for tag in self.tags:
             target_type = min(target_type, tag.target_type)
         return target_type
@@ -222,58 +228,10 @@ class Lead:
     }
     success_pipes = [os.getenv('pipeline_astana_success'), os.getenv('pipeline_almaty_success')]
 
-
-
-
     def __init__(self, id: str):
         self.id = id
         self.poll_type : str = ''
         self.reject_reason : str = 'не заполнено'
-
-    def get_row_col(self):      
-        try:
-            row = date_from_timestamp(get_local_time(self.created_at)).day + 1
-            pipeline_offsets = {
-                os.getenv('astana_pipeline'): 14,
-                os.getenv('almaty_pipeline'): 0,
-                os.getenv('pipeline_astana_success'): 14,
-                os.getenv('pipeline_almaty_success'): 0,
-                os.getenv('pipeline_online'): 28
-            }
-
-            poll_type_defaults = {
-                'tags': lambda self: 3 + self.tags_type,
-                'news': lambda self: 3 + self.tags_type,
-                'add_tag': lambda self: 3 + self.tags_type,
-                'success': lambda self: 11,
-                'qualified': lambda self: 8,
-                'proccessing': lambda self: 7
-            }
-
-            znr = [
-                os.getenv('astana_pipeline'),
-                os.getenv('almaty_pipeline'),
-                os.getenv('pipeline_online')
-            ]
-
-            if self.poll_type not in poll_type_defaults:
-                raise Exception('Невалидное значение poll_type')
-
-            col = poll_type_defaults[self.poll_type](self)
-
-            if self.poll_type == 'qualified' and self.pipeline_id in znr:
-                if self.status_id == os.getenv('status_znr') and self.reject_reason not in ['Передумали', 'Не одобрили рассрочку', 'не заполнено']:
-                    raise Exception('Не квалифицированный лид')
-
-            if self.pipeline_id in pipeline_offsets:
-                col += pipeline_offsets[self.pipeline_id]
-            else:
-                raise Exception(f'Неверный pipeline_id: {self.pipeline_id}')
-
-            return col, row
-        except Exception as e:
-            logger.error(f"Ошибка обработки данных: {e}")
-            raise
 
     def __get_value_from_json(self, field: dict, _all: bool = False) -> str:
         """Приватный метод для получения значения из JSON"""
@@ -337,31 +295,13 @@ class Lead:
         except Exception as e:
             logger.error(f"Общая ошибка обработки данных: {e}")
             raise
-    
-    @classmethod
-    def from_dbmodel(cls, lead_from_db, poll_type: str) -> "Lead":
-        """Обрабатывает вкладку `Основное` в сделке."""
-        try:
-            self: Lead = cls(lead_from_db.id)
-            self.pipeline_id = str(lead_from_db.pipeline_id)
-            self.status_id = lead_from_db.status_id
-            self.tags_type = lead_from_db.tags_type
-            self.created_at = lead_from_db.created_at
-            self.updated_at = lead_from_db.updated_at
-            self.poll_type = poll_type
-            self.reject_reason = lead_from_db.reject_reason
-            return self
-        except Exception as e:
-            logger.error(f"Общая ошибка обработки данных: {e}")
-            raise
-
 
 class Leads:
 
     offset = {
-        'almaty': 0,
-        'astana': 14,
-        'online': 28
+        'almaty': 3,
+        'astana': 41,
+        'online': 79
     }
 
     def __init__(self):
@@ -380,41 +320,195 @@ class Leads:
         self.leads.append(lead)
         self.count += 1
 
+    @property
     def get_target_count(self):
         return len(list(filter(lambda x: x.tags_type == 0, self.leads)))
     
+    @property
     def get_zvonobot_count(self):
         return len(list(filter(lambda x: x.tags_type == 1, self.leads)))
     
-    def get_other_count(self):
+    @property
+    def get_other_city_count(self):
         return len(list(filter(lambda x: x.tags_type == 2, self.leads)))
     
+    @property
+    def get_other_count(self):
+        return len(list(filter(lambda x: x.tags_type == 3, self.leads)))
+    
+    @property
     def get_after_processing_count(self):
         return len(list(filter(lambda x: x.is_after_processing == True, self.leads)))
     
+    @property
     def get_qual_count(self):
         return len(list(filter(lambda x: x.is_qual == True, self.leads)))
     
+    @property
     def get_success_count(self):
         return len(list(filter(lambda x: x.is_success == True, self.leads)))
     
+    @property
+    def get_qual_target_count(self):
+        return len(list(filter(lambda x: x.tags_type == 0 and x.is_qual == True, self.leads)))
+    
+    @property
+    def get_qual_zvonobot_count(self):
+        return len(list(filter(lambda x: x.tags_type == 1 and x.is_qual == True, self.leads)))
+    
+    @property
+    def get_qual_other_city_count(self):
+        return len(list(filter(lambda x: x.tags_type == 2 and x.is_qual == True, self.leads)))
+    
+    @property
+    def get_qual_other_count(self):
+        return len(list(filter(lambda x: x.tags_type == 3 and x.is_qual == True, self.leads)))
+    
+    @property
+    def get_processing_target_count(self):
+        return len(list(filter(lambda x: x.tags_type == 0 and x.is_after_processing == True, self.leads)))
+    
+    @property
+    def get_processing_zvonobot_count(self):
+        return len(list(filter(lambda x: x.tags_type == 1 and x.is_after_processing == True, self.leads)))
+    
+    @property
+    def get_processing_other_city_count(self):
+        return len(list(filter(lambda x: x.tags_type == 2 and x.is_after_processing == True, self.leads)))
+    
+    @property
+    def get_processing_other_count(self):
+        return len(list(filter(lambda x: x.tags_type == 3 and x.is_after_processing == True, self.leads)))
+    
+    @property
+    def get_success_target_count(self):
+        return len(list(filter(lambda x: x.tags_type == 0 and x.is_success == True, self.leads)))
+    
+    @property
+    def get_success_zvonobot_count(self):
+        return len(list(filter(lambda x: x.tags_type == 1 and x.is_success == True, self.leads)))
+    
+    @property
+    def get_success_other_city_count(self):
+        return len(list(filter(lambda x: x.tags_type == 2 and x.is_success == True, self.leads)))
+    
+    @property
+    def get_success_other_count(self):
+        return len(list(filter(lambda x: x.tags_type == 3 and x.is_success == True, self.leads)))
+        
+
     def get_all(self, pipeline: str, today_ts: int):
-        values = [self.get_target_count(), self.get_zvonobot_count(), self.get_other_count()]
+        values = [self.get_target_count, self.get_zvonobot_count, self.get_other_count]
         col = date_from_timestamp(get_local_time(today_ts)).day + 1
         row = 3 + self.offset[pipeline]
         return row, col, values
     
-    def get_ap_qual(self, pipeline: str, today_ts: int):
-        values = [self.get_after_processing_count(), self.get_qual_count()]
+    def get_proccessing(self, pipeline: str, today_ts: int):
+        values = [self.get_after_processing_count, self.get_processing_target_count, self.get_processing_zvonobot_count, self.get_processing_other_count]
+        col = date_from_timestamp(get_local_time(today_ts)).day + 1
+        row = 7 + self.offset[pipeline]
+        return row, col, values
+    
+    def get_qual(self, pipeline: str, today_ts: int):
+        values = [self.get_qual_count, self.get_qual_target_count, self.get_qual_zvonobot_count, self.get_qual_other_count]
         col = date_from_timestamp(get_local_time(today_ts)).day + 1
         row = 7 + self.offset[pipeline]
         return row, col, values
     
     def get_success(self, pipeline: str, today_ts: int):
-        values = [self.get_success_count()]
+        values = [self.get_success_count, self.get_success_target_count, self.get_success_zvonobot_count, self.get_processing_other_count]
         col = date_from_timestamp(get_local_time(today_ts)).day + 1
         row = 11 + self.offset[pipeline]
         return row, col, values
+    
+    def get_column_data(self, pipeline: str, today_ts: int):
+        col = date_from_timestamp(get_local_time(today_ts)).day + 1
+        row = self.offset[pipeline]
+        if pipeline != 'online':
+            data = [
+                [f'=СУММ({LETTERS[col]}{row+1}:{LETTERS[col]}{row+3})'],
+                [self.get_target_count],
+                [self.get_zvonobot_count],
+                [self.get_other_count + self.get_other_city_count],
+                [''],
+                [self.get_after_processing_count],
+                [self.get_processing_target_count],
+                [f'={LETTERS[col]}{row + 6}/{LETTERS[col]}{row + 1}'],
+                [self.get_processing_zvonobot_count],
+                [f'={LETTERS[col]}{row + 8}/{LETTERS[col]}{row + 2}'],
+                [self.get_processing_other_count + self.get_processing_other_city_count],
+                [f'={LETTERS[col]}{row + 10}/{LETTERS[col]}{row + 3}'],
+                [f'={LETTERS[col]}{row + 5}/{LETTERS[col]}{row}'],
+                [''],
+                [self.get_qual_count],
+                [self.get_qual_target_count],
+                [f'={LETTERS[col]}{row + 15}/{LETTERS[col]}{row + 6}'],
+                [self.get_qual_zvonobot_count],
+                [f'={LETTERS[col]}{row + 17}/{LETTERS[col]}{row + 8}'],
+                [self.get_qual_other_count + self.get_qual_other_city_count],
+                [f'={LETTERS[col]}{row + 19}/{LETTERS[col]}{row + 10}'],
+                [f'={LETTERS[col]}{row + 14}/{LETTERS[col]}{row + 5}'],
+                [''],
+                [self.get_success_count],
+                [self.get_success_target_count],
+                [f'={LETTERS[col]}{row + 24}/{LETTERS[col]}{row + 6}'],
+                [f'={LETTERS[col]}{row + 24}/{LETTERS[col]}{row + 15}'],
+                [self.get_success_zvonobot_count],
+                [f'={LETTERS[col]}{row + 27}/{LETTERS[col]}{row + 8}'],
+                [f'={LETTERS[col]}{row + 27}/{LETTERS[col]}{row + 17}'],
+                [self.get_success_other_count + self.get_success_other_city_count],
+                [f'={LETTERS[col]}{row + 30}/{LETTERS[col]}{row + 10}'],
+                [f'={LETTERS[col]}{row + 30}/{LETTERS[col]}{row + 19}'],
+                [f'={LETTERS[col]}{row + 23}/{LETTERS[col]}{row + 5}'],
+                [f'={LETTERS[col]}{row + 23}/{LETTERS[col]}{row + 14}']
+            ]
+        else:
+            data = [
+                [f'=СУММ({LETTERS[col]}{row+1}:{LETTERS[col]}{row+4})'],
+                [self.get_target_count],
+                [self.get_zvonobot_count],
+                [self.get_other_city_count],
+                [self.get_other_count],
+                [''],
+                [self.get_after_processing_count],
+                [self.get_processing_target_count],
+                [f'={LETTERS[col]}{row + 7}/{LETTERS[col]}{row + 1}'],
+                [self.get_processing_zvonobot_count],
+                [f'={LETTERS[col]}{row + 9}/{LETTERS[col]}{row + 2}'],
+                [self.get_processing_other_city_count], 
+                [f'={LETTERS[col]}{row + 11}/{LETTERS[col]}{row + 3}'],
+                [self.get_processing_other_count],
+                [f'={LETTERS[col]}{row + 13}/{LETTERS[col]}{row + 4}'],
+                [f'={LETTERS[col]}{row + 6}/{LETTERS[col]}{row}'],
+                [''],
+                [self.get_qual_count],
+                [self.get_qual_target_count],
+                [f'={LETTERS[col]}{row + 18}/{LETTERS[col]}{row + 7}'],
+                [self.get_qual_zvonobot_count],
+                [f'={LETTERS[col]}{row + 20}/{LETTERS[col]}{row + 9}'],
+                [self.get_qual_other_city_count], 
+                [f'={LETTERS[col]}{row + 22}/{LETTERS[col]}{row + 11}'],
+                [self.get_qual_other_count],
+                [f'={LETTERS[col]}{row + 24}/{LETTERS[col]}{row + 13}'],
+                [f'={LETTERS[col]}{row + 15}/{LETTERS[col]}{row + 6}'],
+                [''],
+                [self.get_success_count],
+                [self.get_success_target_count],
+                [f'={LETTERS[col]}{row + 29}/{LETTERS[col]}{row + 7}'],
+                [f'={LETTERS[col]}{row + 29}/{LETTERS[col]}{row + 18}'],
+                [self.get_success_zvonobot_count],
+                [f'={LETTERS[col]}{row + 32}/{LETTERS[col]}{row + 9}'],
+                [f'={LETTERS[col]}{row + 32}/{LETTERS[col]}{row + 20}'],
+                [self.get_success_other_city_count],
+                [f'={LETTERS[col]}{row + 35}/{LETTERS[col]}{row + 11}'],
+                [f'={LETTERS[col]}{row + 35}/{LETTERS[col]}{row + 22}'],
+                [self.get_success_other_count],
+                [f'={LETTERS[col]}{row + 38}/{LETTERS[col]}{row + 13}'],
+                [f'={LETTERS[col]}{row + 38}/{LETTERS[col]}{row + 24}'],
+                [f'={LETTERS[col]}{row + 28}/{LETTERS[col]}{row + 6}'],
+                [f'={LETTERS[col]}{row + 28}/{LETTERS[col]}{row + 17}']
+            ]
+        return row, col, data
 
     @classmethod
     def from_json(cls, data: dict):

@@ -2,7 +2,14 @@ import os
 import time
 import gspread
 from dotenv import load_dotenv
-from gspread_formatting import set_frozen, set_column_width
+from gspread_formatting import set_frozen, set_column_width, CellFormat, TextFormat, Color
+from gspread_formatting.conditionals import (    
+    get_conditional_format_rules, 
+    ConditionalFormatRule, 
+    GridRange,
+    BooleanCondition,
+    BooleanRule,
+                                             )
 from kztime import date_from_timestamp, get_local_time
 from loguru import logger
 
@@ -43,17 +50,90 @@ class Constructor:
             'Кол-во лидов прочее',
             '',
             'Кол-во обработанных лидов',
+            'Кол-во обработанных лидов таргет',
+            '% обработки таргет',
+            'Кол-во обработанных лидов звонобот',
+            '% обработки звонобот',
+            'Кол-во обработанных лидов прочее',
+            '% обработки прочее',
+            '% обработки',
+            '',
             'Кол-во квал лидов',
+            'Кол-во квал лидов таргет',
+            'Квалификация таргет',
+            'Кол-во квал лидов звонобот',
+            'Квалификация звонобот',
+            'Кол-во квал лидов прочее',
+            'Квалификация прочее',
             '% Квалификации',
             '',
             'Кол-во успешек',
+            'Кол-во успешек таргет',
+            '% продаж с таргета',
+            '% продаж с таргета с квала',
+            'Кол-во успешек звонобот',
+            '% продаж с звонобот',
+            '% продаж с звонобот с квала',
+            'Кол-во успешек прочее',
+            '% продаж с прочее',
+            '% продаж с прочее с квала',
             'Конверсия из лида в продажу',
             'Конверсия из квал-лида в продажу',
             ''
         ]
-        for city in ['АЛМАТА', 'АСТАНА', 'ОНЛАЙН']:
+        rows_title_online = [
+            'Кол-во лидов общее',
+            'Кол-во лидов таргет',
+            'Кол-во лидов звонобот',
+            'Кол-во лидов Другой город',
+            'Кол-во лидов прочее',
+            '',
+            'Кол-во обработанных лидов',
+            'Кол-во обработанных лидов таргет',
+            '% обработки таргет',
+            'Кол-во обработанных лидов звонобот',
+            '% обработки звонобот',
+            'Кол-во обработанных лидов Другой город',
+            '% обработки Другой город',
+            'Кол-во обработанных лидов прочее',
+            '% обработки прочее',
+            '% обработки',
+            '',
+            'Кол-во квал лидов',
+            'Кол-во квал лидов таргет',
+            'Квалификация таргет',
+            'Кол-во квал лидов звонобот',
+            'Квалификация звонобот',
+            'Кол-во квал лидов Другой город',
+            'Квалификация Другой город',
+            'Кол-во квал лидов прочее',
+            'Квалификация прочее',
+            '% Квалификации',
+            '',
+            'Кол-во успешек',
+            'Кол-во успешек таргет',
+            '% продаж с таргета',
+            '% продаж с таргета с квала',
+            'Кол-во успешек звонобот',
+            '% продаж с звонобот',
+            '% продаж с звонобот с квала',
+            'Кол-во успешек Другой город',
+            '% продаж с Другой город',
+            '% продаж с Другой город с квала',
+            'Кол-во успешек прочее',
+            '% продаж с прочее',
+            '% продаж с прочее с квала',
+            'Конверсия из лида в продажу',
+            'Конверсия из квал-лида в продажу',
+            ''
+        ]
+
+        for city in ['АЛМАТА', 'АСТАНА']:
+            first_col.append('План по лидам')
             first_col.append(city)
             first_col.extend(rows_title)
+        first_col.extend(['План по лидам', 'ОНЛАЙН'])
+        first_col.extend(rows_title_online)
         return [first_col]
     
     def get_date_row():
@@ -119,20 +199,21 @@ class GoogleSheets:
 
     def create_new_sheet(self, sheet_name):
         try:
-            ws = self.table.add_worksheet(sheet_name, 42, 42)
-            formulas = Constructor.get_formules_rows()
-            rows = []
-            for index in range(1, 43):
-                if index not in formulas:
-                    rows.append([''])
-                else:
-                    rows.append(formulas[index])
-            ws.insert_rows(rows, 1, value_input_option="USER_ENTERED")
+            ws = self.table.add_worksheet(sheet_name, 123, 33)
+            dates = Constructor.get_date_row()
+            for i in [2, 40, 78]:
+                ws.insert_row(dates, i, value_input_option="USER_ENTERED")
+
             ws.insert_cols(Constructor.get_first_col(), 1, value_input_option="USER_ENTERED")
-            ws.format(['9:9', '12:12', '13:13', '23:23', '26:26', '27:27', '37:37', '40:40', '41:41'], {
+            ws.format(['10:10', '12:12', '14:15', '19:19', '21:21', '23:24', '28:29', '31:32', '34:37',
+                        '48:48', '59:59', '61:62', '57:57', '59:59', '61:62', '66:67', '69:70', '72:75',
+                        '87:87', '89:89', '91:91', '93:94', '98:98', '100:100', '102:102', '104:105',
+                        '109:110', '112:113', '115:116', '118:121'
+                   ], {
                 'numberFormat': {'type': 'PERCENT'}
             })
-            ws.format(['2:5', '16:19', '30:33'], {
+            # BLUE
+            ws.format(['3:6', '41:44', '79:83'], {
                 "backgroundColor": {
                     
                         "red": 0.7882,
@@ -141,21 +222,32 @@ class GoogleSheets:
                     
                 },
             })
-            ws.format(['7:9', '21:23', '35:37'], {
+            # PURPLE
+            ws.format(['8:15', '46:53', '85:94'], {
                 "backgroundColor": {
                 "red": 0.851,
                 "green": 0.8235,
                 "blue": 0.9137
                 },
             })
-            ws.format(['11:13', '25:27', '39:41'], {
+            # YELLOW
+            ws.format(['17:24', '55:62', '96:105', 'B1', 'B39', 'B77'], {
+                "backgroundColor": {
+                "red": 1.0,
+                "green": 0.9490,
+                "blue": 0.8
+                },
+            })
+            # GREEN
+            ws.format(['26:37', '64:75', '107:121'], {
                 "backgroundColor": {
                 "red": 0.851,
                 "green": 0.9176,
                 "blue": 0.8275
                 },
             })
-            ws.format(['A1', 'A15', 'A29'], {
+            # RED
+            ws.format(['A2', 'A40', 'A78'], {
                 "backgroundColor": {
                 "red": 0.9569,
                 "green": 0.8,
@@ -166,6 +258,19 @@ class GoogleSheets:
                     "bold": True
                 }
             })
+            ws.format(['B1', 'B39', 'B77'], {
+                'textFormat': {
+                    "fontSize": 20,
+                    "bold": True
+                }
+            })
+            ws.format(['A1', 'A39', 'A77'], {
+                'textFormat': {
+                    "fontSize": 14,
+                    "bold": True
+                }
+            })
+            self.set_rules(ws)
             time.sleep(2)
             set_frozen(ws, cols=1)
             set_column_width(ws, 'A', 200)
@@ -173,6 +278,61 @@ class GoogleSheets:
         except Exception as e:
             logger.error(f'Ошибка создания таблицы: {e}')
             raise
+    
+    def set_rules(self, ws):
+        rules = [
+            {
+                'formula': '= B3 > $B1 * 1,2',
+                'color': {
+                    'r': 0.2352,
+                    'g': 0.4705,
+                    'b': 0.8470
+                }
+            },
+            {
+                'formula': '= B3 > $B1 * 0,9',
+                'color': {
+                    'r': 0.0039,
+                    'g': 1.0,
+                    'b': 0.0
+                }
+            },
+            {
+                'formula': '= B3 > $B1 * 0,8',
+                'color': {
+                    'r': 1.0,
+                    'g': 1.0,
+                    'b': 0.0
+                }
+            },
+            {
+                'formula': '= B3 > $B1 * 0,6',
+                'color': {
+                    'r': 0.8784,
+                    'g': 0.4,
+                    'b': 0.4
+                }
+            },
+            {
+                'formula': '= B3 <= $B1 * 0,6',
+                'color': {
+                    'r': 1.0,
+                    'g': 0.0,
+                    'b': 0.0
+                }
+            }
+        ]
+        cond_rules = get_conditional_format_rules(ws)
+        for rule in rules:
+            cond_rule = ConditionalFormatRule(
+                ranges=[GridRange.from_a1_range('B3:AF3', ws), GridRange.from_a1_range('B3:AF3', ws), GridRange.from_a1_range('B41:AF41', ws), GridRange.from_a1_range('B79:AF79', ws)],
+                booleanRule=BooleanRule(
+                    condition=BooleanCondition('CUSTOM_FORMULA', [rule['formula']]),
+                    format=CellFormat(textFormat=TextFormat(bold=True), backgroundColor=Color(rule['color']['r'],rule['color']['g'],rule['color']['b']))
+                )
+            )
+            cond_rules.rules.append(cond_rule)
+        cond_rules.save()
 
     def insert_value(self, row, col, timestamp: int = None):
         """Вставляет строку данных на указанный индекс."""
@@ -188,6 +348,10 @@ class GoogleSheets:
         except Exception as e:
             logger.error(f"Ошибка при вставке значения: {e}")
             raise
+
+    def insert_col(self, row, col, values, today_ts):
+        ws = self.get_sheet(today_ts)
+        ws.update(values, f'{LETTERS[col]}{row}:{LETTERS[col]}{row + len(values)}', raw=False)
 
     def minus_value(self, row, col):
         try:
@@ -211,3 +375,8 @@ class GoogleSheets:
             time.sleep(0.3)
             row += 1
         
+if __name__ == '__main__':
+    gs = GoogleSheets()
+    # ws = gs.get_sheet(9999999999)
+    ws = gs.create_new_sheet('test sheet')
+    # print(Constructor.get_date_row())
