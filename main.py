@@ -57,11 +57,11 @@ async def polling_pipelines(last_update: int):
     amo_client.start_session()
     # today = get_today(last_update)
     week = get_last_week_list(last_update)
-    # 189 requests to Google Sheets per minute
+    # 42 (6 * 7) requests to Google Sheets per minute
     for day in week:
         end_day = day + 86399
         logger.info(f'Сбор данных за day: {day}')
-        # 27 requests to Google Sheets per minute
+        # 6 (2 * 3) requests to Google Sheets per minute
         for pipeline in PIPES:
             try:
                 page = 1
@@ -77,13 +77,7 @@ async def polling_pipelines(last_update: int):
                             next = response.get('_links', {}).get('next')
 
                     local_today = get_local_time(day)
-                    google.insert_col(*leads.get_column_data(pipeline, day), local_today)
-                    # 9 req
-                    
-                    # google.insert_val(*leads.get_all(pipeline, day), local_today) # 4 запроса
-                    # google.insert_val(*leads.get_ap_qual(pipeline, day), local_today) # 3 req
-                    # google.insert_val(*leads.get_success(pipeline, day), local_today) # 2 req
-                
+                    google.insert_col(*leads.get_column_data(pipeline, day), local_today) # 2 req
             except Exception as ex:
                 logger.error(f'Ошибка обработки воронки: {ex}')
     await amo_client.close_session()

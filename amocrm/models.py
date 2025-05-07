@@ -133,7 +133,9 @@ class Tag:
         self.target_type = self.__get_target_type()
 
     def __get_target_type(self):
-        if self.is_target:
+        if self.is_other_city:
+            return -1
+        elif self.is_target:
             return 0
         elif self.is_zvonobot:
             return 1
@@ -191,7 +193,7 @@ class Tags:
         self.tags.append(tag)
     
     def get_type(self):
-        target_type = 3
+        target_type = 2
         for tag in self.tags:
             target_type = min(target_type, tag.target_type)
         return target_type
@@ -330,11 +332,11 @@ class Leads:
     
     @property
     def get_other_city_count(self):
-        return len(list(filter(lambda x: x.tags_type == 2, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == -1, self.leads)))
     
     @property
     def get_other_count(self):
-        return len(list(filter(lambda x: x.tags_type == 3, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == 2, self.leads)))
     
     @property
     def get_after_processing_count(self):
@@ -358,11 +360,11 @@ class Leads:
     
     @property
     def get_qual_other_city_count(self):
-        return len(list(filter(lambda x: x.tags_type == 2 and x.is_qual == True, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == -1 and x.is_qual == True, self.leads)))
     
     @property
     def get_qual_other_count(self):
-        return len(list(filter(lambda x: x.tags_type == 3 and x.is_qual == True, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == 2 and x.is_qual == True, self.leads)))
     
     @property
     def get_processing_target_count(self):
@@ -374,11 +376,11 @@ class Leads:
     
     @property
     def get_processing_other_city_count(self):
-        return len(list(filter(lambda x: x.tags_type == 2 and x.is_after_processing == True, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == -1 and x.is_after_processing == True, self.leads)))
     
     @property
     def get_processing_other_count(self):
-        return len(list(filter(lambda x: x.tags_type == 3 and x.is_after_processing == True, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == 2 and x.is_after_processing == True, self.leads)))
     
     @property
     def get_success_target_count(self):
@@ -390,11 +392,11 @@ class Leads:
     
     @property
     def get_success_other_city_count(self):
-        return len(list(filter(lambda x: x.tags_type == 2 and x.is_success == True, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == -1 and x.is_success == True, self.leads)))
     
     @property
     def get_success_other_count(self):
-        return len(list(filter(lambda x: x.tags_type == 3 and x.is_success == True, self.leads)))
+        return len(list(filter(lambda x: x.tags_type == 2 and x.is_success == True, self.leads)))
         
 
     def get_all(self, pipeline: str, today_ts: int):
