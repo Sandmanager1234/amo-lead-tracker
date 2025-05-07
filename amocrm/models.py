@@ -169,7 +169,7 @@ class Tag:
     
     @property
     def is_other_city(self):
-        return self.name == 'Другой город'
+        return self.name == 'Другой_город'
 
     @classmethod
     def from_json(cls, data: dict):
