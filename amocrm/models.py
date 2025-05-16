@@ -275,7 +275,7 @@ class Lead:
             fields = data.get("custom_fields_values", []) if data.get("custom_fields_values", []) else []
             for field in fields:
                 match field.get("field_name", None):
-                    case 'Причина отказа':
+                    case 'ЗНР причина':
                         self.reject_reason = self.__get_value_from_json(field)
                     case _:
                         continue
@@ -287,7 +287,7 @@ class Lead:
             
             if (self.status_id not in self.after_processing_statuses.get(self.pipeline_id, [])
                 and 
-                self.reject_reason in ['Передумали', 'Не одобрили рассрочку', 'не заполнено']):
+                self.reject_reason not in ['Не прошли квал', 'НД']):
                 self.is_qual = True
 
             return self
