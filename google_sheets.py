@@ -183,7 +183,7 @@ class GoogleSheets:
         try:
             if not current_day:
                 current_day = get_local_datetime()
-            
+            print(current_day)
             sheet_name = f'{MONTH[current_day.month]} {current_day.year}'
             ws = self.table.worksheet(sheet_name)
             time.sleep(0.3)
@@ -333,11 +333,11 @@ class GoogleSheets:
             cond_rules.rules.append(cond_rule)
         cond_rules.save()
 
-    def insert_value(self, row, col, timestamp: int = None):
+    def insert_value(self, row, col, day = None):
         """Вставляет строку данных на указанный индекс."""
         try:
             logger.info(f"Вставка +1 на позицию {row}:{col}")
-            ws = self.get_sheet(timestamp)
+            ws = self.get_sheet(day)
             value = ws.cell(row, col).value
             time.sleep(0.3)
             value = int(value) if value else 0
@@ -348,8 +348,8 @@ class GoogleSheets:
             logger.error(f"Ошибка при вставке значения: {e}")
             raise
 
-    def insert_col(self, row, col, values, today_ts):
-        ws = self.get_sheet(today_ts)
+    def insert_col(self, row, col, values, day):
+        ws = self.get_sheet(day)
         ws.update(values, f'{LETTERS[col]}{row}:{LETTERS[col]}{row + len(values)}', raw=False)
 
     def minus_value(self, row, col):

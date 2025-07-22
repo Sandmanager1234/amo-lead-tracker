@@ -75,7 +75,7 @@ async def polling_pipelines(last_update: int):
                             leads.add_leads(Leads.from_json(response))
                             next = response.get('_links', {}).get('next')
 
-                    google.insert_col(*leads.get_column_data(pipeline, day), start_ts) # 2 req
+                    google.insert_col(*leads.get_column_data(pipeline, day), day) # 2 req
             except Exception as ex:
                 logger.error(f'Ошибка обработки воронки: {ex}')
     await amo_client.close_session()
