@@ -272,7 +272,7 @@ class GoogleSheets:
             self.set_rules(ws)
             time.sleep(2)
             set_frozen(ws, cols=1)
-            set_column_width(ws, 'A', 200)
+            set_column_width(ws, 'A', 300)
             return ws
         except Exception as e:
             logger.error(f'Ошибка создания таблицы: {e}')
