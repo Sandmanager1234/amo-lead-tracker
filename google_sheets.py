@@ -10,7 +10,7 @@ from gspread_formatting.conditionals import (
     BooleanCondition,
     BooleanRule,
                                              )
-from kztime import date_from_timestamp, get_local_time
+from kztime import get_local_datetime
 from loguru import logger
 
 
@@ -137,7 +137,7 @@ class Constructor:
         return [first_col]
     
     def get_date_row():
-        month = str(get_local_time().month).zfill(2)
+        month = str(get_local_datetime().month).zfill(2)
         return [f'{str(i).zfill(2)}.{month}' for i in range(1, 32)]
     
     def get_formules_rows():
@@ -179,13 +179,12 @@ class GoogleSheets:
             logger.error(f"Ошибка при инициализации GoogleSheets: {e}")
             raise
 
-    def get_sheet(self, timestamp: int = None):
+    def get_sheet(self, current_day = None):
         try:
-            if not timestamp:
-                current_date = get_local_time()
-            else:
-                current_date = date_from_timestamp(timestamp)
-            sheet_name = f'{MONTH[current_date.month]} {current_date.year}'
+            if not current_day:
+                current_day = get_local_datetime()
+            
+            sheet_name = f'{MONTH[current_day.month]} {current_day.year}'
             ws = self.table.worksheet(sheet_name)
             time.sleep(0.3)
         except gspread.WorksheetNotFound as ex:
@@ -194,7 +193,7 @@ class GoogleSheets:
         except Exception as ex:
             logger.warning(f'Ошибка получения листа: {ex}')
             time.sleep(1)
-            ws = self.get_sheet(timestamp)
+            ws = self.get_sheet(current_day)
         return ws
 
     def create_new_sheet(self, sheet_name):

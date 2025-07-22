@@ -1,6 +1,6 @@
 import asyncio
 import aiofiles
-from kztime import get_unix_dt
+from kztime import get_local_datetime
 from contextlib import suppress
 
 
@@ -37,9 +37,9 @@ class Scheduler:
             async with aiofiles.open(self._filename, 'r') as file:
                 curr_timestamp = int(await file.read())
         except:
-            curr_timestamp = int(get_unix_dt().timestamp())
+            curr_timestamp = int(get_local_datetime().timestamp())
         finally:
-            timestamp = int(get_unix_dt().timestamp())
+            timestamp = int(get_local_datetime().timestamp())
             async with aiofiles.open(self._filename, 'w') as file:
                 await file.write(str(timestamp))
         return curr_timestamp

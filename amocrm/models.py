@@ -1,6 +1,5 @@
 import re
 import os
-from kztime import date_from_timestamp, get_local_time
 from typing import Generator
 from loguru import logger
 from dotenv import load_dotenv
@@ -398,33 +397,8 @@ class Leads:
     def get_success_other_count(self):
         return len(list(filter(lambda x: x.tags_type == 2 and x.is_success == True, self.leads)))
         
-
-    def get_all(self, pipeline: str, today_ts: int):
-        values = [self.get_target_count, self.get_zvonobot_count, self.get_other_count]
-        col = date_from_timestamp(get_local_time(today_ts)).day + 1
-        row = 3 + self.offset[pipeline]
-        return row, col, values
-    
-    def get_proccessing(self, pipeline: str, today_ts: int):
-        values = [self.get_after_processing_count, self.get_processing_target_count, self.get_processing_zvonobot_count, self.get_processing_other_count]
-        col = date_from_timestamp(get_local_time(today_ts)).day + 1
-        row = 7 + self.offset[pipeline]
-        return row, col, values
-    
-    def get_qual(self, pipeline: str, today_ts: int):
-        values = [self.get_qual_count, self.get_qual_target_count, self.get_qual_zvonobot_count, self.get_qual_other_count]
-        col = date_from_timestamp(get_local_time(today_ts)).day + 1
-        row = 7 + self.offset[pipeline]
-        return row, col, values
-    
-    def get_success(self, pipeline: str, today_ts: int):
-        values = [self.get_success_count, self.get_success_target_count, self.get_success_zvonobot_count, self.get_processing_other_count]
-        col = date_from_timestamp(get_local_time(today_ts)).day + 1
-        row = 11 + self.offset[pipeline]
-        return row, col, values
-    
-    def get_column_data(self, pipeline: str, today_ts: int):
-        col = date_from_timestamp(get_local_time(today_ts)).day + 1
+    def get_column_data(self, pipeline: str, day):
+        col = day.day + 1
         row = self.offset[pipeline]
         if pipeline != 'online':
             data = [
@@ -522,10 +496,3 @@ class Leads:
             return self
         except Exception as e:
             logger.error(f'Ошибка обработки списка сделок: {e}')
-
-
-
-
-if __name__ == '__main__':
-    tag = Tag(1234, 'sdfkg')
-    print(tag.get_regex())

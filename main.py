@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
-from kztime import get_local_time, get_today, get_last_week_list
+from kztime import get_local_datetime, get_last_week_list, get_today_info
 from google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Leads
@@ -32,7 +32,6 @@ log_file_path = os.path.join(
     "logs", f"{current_directory_name}_{{time:YYYY-MM-DD}}.log"
 )
 
-
 # Настройка ротации логов
 logger.add(
     log_file_path,  # Файл лога будет называться по дате и сохраняться в поддиректории с названием текущей директории
@@ -58,26 +57,25 @@ async def polling_pipelines(last_update: int):
     # today = get_today(last_update)
     week = get_last_week_list(last_update)
     # 42 (6 * 7) requests to Google Sheets per minute
-    for day in week:
-        end_day = day + 86399
+    for _day in week:
+        start_ts, end_ts, day = get_today_info(_day)
         logger.info(f'Сбор данных за day: {day}')
         # 6 (2 * 3) requests to Google Sheets per minute
         for pipeline in PIPES:
             try:
                 page = 1
-                response = await amo_client.get_leads(day, end_day, PIPES[pipeline])
+                response = await amo_client.get_leads(start_ts, end_ts, PIPES[pipeline])
                 if response:
                     leads = Leads.from_json(response)
                     next = response.get('_links', {}).get('next')
                     while next:
                         page += 1
-                        response = await amo_client.get_leads(day, end_day, PIPES[pipeline], page)
+                        response = await amo_client.get_leads(start_ts, end_ts, PIPES[pipeline], page)
                         if response:
                             leads.add_leads(Leads.from_json(response))
                             next = response.get('_links', {}).get('next')
 
-                    local_today = get_local_time(day)
-                    google.insert_col(*leads.get_column_data(pipeline, day), local_today) # 2 req
+                    google.insert_col(*leads.get_column_data(pipeline, day), start_ts) # 2 req
             except Exception as ex:
                 logger.error(f'Ошибка обработки воронки: {ex}')
     await amo_client.close_session()
