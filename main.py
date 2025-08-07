@@ -63,19 +63,19 @@ async def polling_pipelines(last_update: int):
         # 6 (2 * 3) requests to Google Sheets per minute
         for pipeline in PIPES:
             try:
-                page = 1
+                page = 10000
                 response = await amo_client.get_leads(start_ts, end_ts, PIPES[pipeline])
                 if response:
                     leads = Leads.from_json(response)
-                    next = response.get('_links', {}).get('next')
+                    next = response.get('_links', {}).get('next', None)
                     while next:
                         page += 1
                         response = await amo_client.get_leads(start_ts, end_ts, PIPES[pipeline], page)
                         if response:
                             leads.add_leads(Leads.from_json(response))
-                            next = response.get('_links', {}).get('next')
+                        next = response.get('_links', {}).get('next', None)
 
-                    google.insert_col(*leads.get_column_data(pipeline, day), day) # 2 req
+                    # google.insert_col(*leads.get_column_data(pipeline, day), day) # 2 req
             except Exception as ex:
                 logger.error(f'Ошибка обработки воронки: {ex}')
     await amo_client.close_session()
