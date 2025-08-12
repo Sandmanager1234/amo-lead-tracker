@@ -63,7 +63,7 @@ async def polling_pipelines(last_update: int):
         # 6 (2 * 3) requests to Google Sheets per minute
         for pipeline in PIPES:
             try:
-                page = 10000
+                page = 1
                 response = await amo_client.get_leads(start_ts, end_ts, PIPES[pipeline])
                 if response:
                     leads = Leads.from_json(response)
