@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from scheduler import Scheduler
-from kztime import get_local_datetime, get_last_week_list, get_today_info
-from google_sheets import GoogleSheets
+from kztime import get_local_datetime, get_last_week_list, get_today_info, get_last_month
+from google_sheets.google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Leads
 
@@ -52,33 +52,30 @@ amo_client = AmoCRMClient(
 )
 
 
-async def polling_pipelines(last_update: int):
+async def polling_pipelines():
     amo_client.start_session()
-    # today = get_today(last_update)
-    week = get_last_week_list(last_update)
-    # 42 (6 * 7) requests to Google Sheets per minute
-    for _day in week:
-        start_ts, end_ts, day = get_today_info(_day)
-        logger.info(f'Сбор данных за day: {day}')
-        # 6 (2 * 3) requests to Google Sheets per minute
-        for pipeline in PIPES:
-            try:
-                page = 1
-                response = await amo_client.get_leads(start_ts, end_ts, PIPES[pipeline])
+    start_ts, _, day = get_last_month()
+    try:
+        page = 1
+        response = await amo_client.get_last_month_leads(PIPES, start_ts)
+        await asyncio.sleep(0.3)
+        if response:
+            leads = Leads.from_json(response)
+            next = response.get('_links', {}).get('next', None)
+            while next:
+                page += 1
+                response = await amo_client.get_last_month_leads(PIPES, start_ts, page)
                 if response:
-                    leads = Leads.from_json(response)
-                    next = response.get('_links', {}).get('next', None)
-                    while next:
-                        page += 1
-                        response = await amo_client.get_leads(start_ts, end_ts, PIPES[pipeline], page)
-                        if response:
-                            leads.add_leads(Leads.from_json(response))
-                        next = response.get('_links', {}).get('next', None)
-
-                    google.insert_col(*leads.get_column_data(pipeline, day), day) # 2 req
-            except Exception as ex:
-                logger.error(f'Ошибка обработки воронки: {ex}')
-    await amo_client.close_session()
+                    leads.add_leads(Leads.from_json(response))
+                next = response.get('_links', {}).get('next', None)
+                await asyncio.sleep(0.3)
+        leads_data = leads.get_column_data(PIPES)
+        google.insert_leads_data(leads_data, day)
+        # записать в гугол
+    except Exception as ex:   
+        logger.error(f'Ошибка обработки воронки: {ex}')
+    finally:
+        await amo_client.close_session()
 
 
 async def main():

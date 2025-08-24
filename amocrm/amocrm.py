@@ -254,6 +254,17 @@ class AmoCRMClient:
             params[f'filter[pipeline_id][{i}]'] = pipeline_id
         return await self._make_request("GET", f"/api/v4/leads", params=params)
 
+    async def get_last_month_leads(self, pipelines: dict, from_timestamp: int, page: int = 1):
+        params = {
+            'filter[created_at][from]': from_timestamp,
+            'page': page
+        }
+        counter = 1
+        for pipe in pipelines:
+            for pipe_id in pipelines[pipe]:
+                params[f'filter[pipeline_id][{counter}]'] = pipe_id
+                counter += 1
+        return await self._make_request("GET", f"/api/v4/leads", params=params)
     
 
     

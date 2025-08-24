@@ -28,3 +28,12 @@ def get_last_week_list(ts: int = None) -> list:
         today -= timedelta(days=1)
         week.append(today)
     return week
+
+
+def get_last_month():
+    dt = get_local_datetime()
+    return get_today_info(dt - timedelta(days=30))
+
+
+if __name__ == '__main__':
+    print(get_last_month())
