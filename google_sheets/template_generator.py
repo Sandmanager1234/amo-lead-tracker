@@ -5,7 +5,6 @@ import datetime
 class TemplateGenerator:
 
     __rows_title = [
-        *['' for _ in range(4)],
         'Кол-во лидов общее',
         'Кол-во лидов таргет',
         'Кол-во лидов звонобот',
@@ -45,7 +44,6 @@ class TemplateGenerator:
     ]
     
     __rows_title_online = [
-        *['' for _ in range(4)],
         'Кол-во лидов общее',
         'Кол-во лидов таргет',
         'Кол-во лидов звонобот',
@@ -208,7 +206,10 @@ class TemplateGenerator:
                 ]
             )
             cols[1].extend(
-                self.pipes_titles.get(pipe, [])
+                [
+                    *['' for _ in range(4)],
+                    *self.pipes_titles.get(pipe, [])
+                ]
             )
             cols[2].extend(
                 [
@@ -452,7 +453,7 @@ class TemplateGenerator:
     
     def create_vertical_shablon(self, pipe):
         rows = []
-        if pipe == 'Онлайн':
+        if pipe == 'online':
             rows.append(
                 [
                     pipe,
@@ -505,7 +506,7 @@ class TemplateGenerator:
         else:
             rows.append(
                 [
-                    pipe,
+                    self.pipe_names_rus[pipe],
                     self.get_vertical_sum(2),
                     self.get_vertical_sum(3),
                     self.get_vertical_sum(4),
@@ -544,8 +545,13 @@ class TemplateGenerator:
                     ''
                 ]
             )
+        row_titles = ['День']
+        if pipe != 'online':
+            row_titles.extend(self.__rows_title)
+        else:
+            row_titles.extend(self.__rows_title_online)
         rows.append(
-            ['День'].extend(self.pipes_titles.get(pipe, []))
+            row_titles
         )
         return rows
 

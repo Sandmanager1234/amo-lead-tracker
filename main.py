@@ -82,11 +82,15 @@ def test():
     _, _, day = get_today_info()
     import datetime
     start_day = day.replace(month=7) - datetime.timedelta()
-    import json
-    with open('lead_data_json.json', 'r',encoding='utf8') as file:
-        leads_data = json.load(file)
+    # import json
+    # with open('lead_data_json.json', 'r',encoding='utf8') as file:
+    #     leads_data = json.load(file)
     # google.insert_leads_data(leads_data, start_day)    
-    google.insert_leads_data_vertical(leads_data)
+    # google.insert_leads_data_vertical(leads_data)
+    print(start_day)
+    ws = google.get_vertical_sheet(8, 2025, 'online')
+    # print(google.tg.create_vertical_shablon('online'))
+    # print(ws)
     # shab, m = google.tg.create_shablon(day)
     # print(len(shab[0]))
 
@@ -100,3 +104,4 @@ def main():
 if __name__ == "__main__":
     while True:
         run_pending()
+    # main()
