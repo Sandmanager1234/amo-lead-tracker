@@ -605,13 +605,13 @@ class Leads:
         for pipe in pipelines:
             last_30_days_data[pipe] = {}
             _, _, now = get_today_info()
-            for _ in range(30):
+            for _ in range(31):
                 if now.year not in last_30_days_data[pipe]:
                     last_30_days_data[pipe][now.year] = {}
                 if now.month not in last_30_days_data[pipe][now.year]:
                     last_30_days_data[pipe][now.year][now.month] = {}
                 if now.day not in last_30_days_data[pipe][now.year][now.month]:
-                    last_30_days_data[pipe][now.month][now.day] = self.get_day_data(pipe, now)
+                    last_30_days_data[pipe][now.year][now.month][now.day] = self.get_day_data(pipe, now)
                 now -= timedelta(days=1)
         return last_30_days_data
 
@@ -625,3 +625,8 @@ class Leads:
             return self
         except Exception as e:
             logger.error(f'Ошибка обработки списка сделок: {e}')
+
+
+if __name__ == '__main__':
+    l = Leads()
+

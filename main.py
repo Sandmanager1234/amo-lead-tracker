@@ -1,10 +1,9 @@
 import os
 import asyncio
-from datetime import timedelta
 from dotenv import load_dotenv
 from loguru import logger
+from schedule import repeat, run_pending, every
 
-from scheduler import Scheduler
 from kztime import get_local_datetime, get_last_week_list, get_today_info, get_last_month
 from google_sheets.google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
@@ -68,29 +67,36 @@ async def polling_pipelines():
                 if response:
                     leads.add_leads(Leads.from_json(response))
                 next = response.get('_links', {}).get('next', None)
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.2)
         leads_data = leads.get_column_data(PIPES)
         google.insert_leads_data(leads_data, day)
+        google.insert_leads_data_vertical(leads_data)
         # записать в гугол
-    except Exception as ex:   
+    except Exception as ex: 
         logger.error(f'Ошибка обработки воронки: {ex}')
     finally:
         await amo_client.close_session()
 
 
-async def main():
-    scheduler = Scheduler(polling_pipelines, SECONDS)
-    while True:
-        try:
-            await scheduler.start()
-            await asyncio.sleep(600)
-        except Exception as ex:
-            logger.error(f'Ошибка: {ex}')
-        finally:
-            await scheduler.stop()
+def test():
+    _, _, day = get_today_info()
+    import datetime
+    start_day = day.replace(month=7) - datetime.timedelta()
+    import json
+    with open('lead_data_json.json', 'r',encoding='utf8') as file:
+        leads_data = json.load(file)
+    # google.insert_leads_data(leads_data, start_day)    
+    google.insert_leads_data_vertical(leads_data)
+    # shab, m = google.tg.create_shablon(day)
+    # print(len(shab[0]))
+
+
+@repeat(every(6).minutes)
+def main():
+    asyncio.run(polling_pipelines())
 
 
 # Запуск приложения
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    while True:
+        run_pending()

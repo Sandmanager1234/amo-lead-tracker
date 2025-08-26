@@ -5,6 +5,7 @@ import datetime
 class TemplateGenerator:
 
     __rows_title = [
+        *['' for _ in range(4)],
         'Кол-во лидов общее',
         'Кол-во лидов таргет',
         'Кол-во лидов звонобот',
@@ -44,6 +45,7 @@ class TemplateGenerator:
     ]
     
     __rows_title_online = [
+        *['' for _ in range(4)],
         'Кол-во лидов общее',
         'Кол-во лидов таргет',
         'Кол-во лидов звонобот',
@@ -90,7 +92,12 @@ class TemplateGenerator:
         ''
     ]
     
-
+    pipe_names_rus = {
+        'astana': 'Астана',
+        'almaty': 'Алматы',
+        'online': 'Онлайн'
+    }
+    
     pipes_titles = {
         'Алмата': __rows_title,
         'Астана': __rows_title,
@@ -125,7 +132,10 @@ class TemplateGenerator:
     PIPELINES_DIFF = {
         'Алмата': 0,
         'Астана': 40,
-        'Онлайн': 80
+        'Онлайн': 80,
+        'almaty': 0,
+        'astana': 40,
+        'online': 80
     }
 
 
@@ -144,6 +154,7 @@ class TemplateGenerator:
     def get_year(self, month, today):
         if month == 12 and today.month == 1:
             return today.year - 1
+        return today.year
     
     def get_weeknum(self, today: datetime.datetime):
         weeks, month = self.generate_month_weeks(today)
@@ -153,7 +164,7 @@ class TemplateGenerator:
             weekday = today.isoweekday()
             day_num = today.day - weekday + 7
             weeknum = day_num // 7
-        year = self.get_year(self, month, today)
+        year = self.get_year(month, today)
         return weeknum, month, year
 
     def get_formula_row(self, weeks_ids: list, row_num: int, is_avg: bool = False):
@@ -167,15 +178,9 @@ class TemplateGenerator:
 
 
     def get_week_range(self, pipe: str, week_num: int, len_data: int):
-        return f'{
-            self.convert_num_to_letters(5 + self.PIPELINES_DIFF.get(pipe, 0))
-        }{
-            8 + week_num * 9
-        }:{
-            self.convert_num_to_letters(5 + len_data + self.PIPELINES_DIFF.get(pipe, 0))
-        }{
-            14 + week_num * 9 
-        }'
+        letter = self.convert_num_to_letters(8 + week_num * 9)
+        letter_end = self.convert_num_to_letters(14 + week_num * 9)
+        return f'{letter}{5 + self.PIPELINES_DIFF.get(pipe, 0)}:{letter_end}{len_data + 5 + self.PIPELINES_DIFF.get(pipe, 0)}'
 
 
     def create_shablon(self, today: datetime.datetime):
@@ -185,10 +190,10 @@ class TemplateGenerator:
         col_count = 5 + 9 * weeks_num
         cols = [[] for _ in range(col_count)]
         
-        for pipe in self.PIPELINES_DIFF: 
+        for pipe in self.pipes_titles: 
             cols[0].extend(
                 [
-                    f'{[pipe]} {self.MONTH[month]}',
+                    f'{pipe} {self.MONTH[month]}',
                     '', 
                     'Метрики', 
                     '', 
@@ -252,7 +257,7 @@ class TemplateGenerator:
                         f'=D{32 + self.PIPELINES_DIFF.get(pipe, 0)}/D{22 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         self.get_formula_row(weeks_ids, 35 + self.PIPELINES_DIFF.get(pipe, 0)),
                         f'=D{35 + self.PIPELINES_DIFF.get(pipe, 0)}/D{15 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{35 + self.PIPELINES_DIFF.get(pipe, 0)}/D{24 + self.PIPELINES_DIFF.get(pipe, 0)}'
+                        f'=D{35 + self.PIPELINES_DIFF.get(pipe, 0)}/D{24 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         f'=D{28 + self.PIPELINES_DIFF.get(pipe, 0)}/D{10 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         f'=D{28 + self.PIPELINES_DIFF.get(pipe, 0)}/D{19 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         ''
@@ -305,7 +310,7 @@ class TemplateGenerator:
                         f'=D{40 + self.PIPELINES_DIFF.get(pipe, 0)}/D{27 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         self.get_formula_row(weeks_ids, 43 + self.PIPELINES_DIFF.get(pipe, 0)),
                         f'=D{43 + self.PIPELINES_DIFF.get(pipe, 0)}/D{18 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{43 + self.PIPELINES_DIFF.get(pipe, 0)}/D{29 + self.PIPELINES_DIFF.get(pipe, 0)}'
+                        f'=D{43 + self.PIPELINES_DIFF.get(pipe, 0)}/D{29 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         f'=D{33 + self.PIPELINES_DIFF.get(pipe, 0)}/D{11 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         f'=D{33 + self.PIPELINES_DIFF.get(pipe, 0)}/D{22 + self.PIPELINES_DIFF.get(pipe, 0)}',
                         ''
@@ -444,6 +449,108 @@ class TemplateGenerator:
                         ]
                     )
         return cols, month
+    
+    def create_vertical_shablon(self, pipe):
+        rows = []
+        if pipe == 'Онлайн':
+            rows.append(
+                [
+                    pipe,
+                    self.get_vertical_sum(2),
+                    self.get_vertical_sum(3),
+                    self.get_vertical_sum(4),
+                    self.get_vertical_sum(5),
+                    self.get_vertical_sum(6),
+                    '',
+                    self.get_vertical_sum(8),
+                    self.get_vertical_sum(9),
+                    '=I1/C1',
+                    self.get_vertical_sum(11),
+                    '=K1/D1',
+                    self.get_vertical_sum(13),
+                    '=M1/E1',
+                    self.get_vertical_sum(15),
+                    '=O1/F1',
+                    '=H1/B1',
+                    '',
+                    self.get_vertical_sum(19),
+                    self.get_vertical_sum(20),
+                    '=T1/I1',
+                    self.get_vertical_sum(22),
+                    '=V1/K1',
+                    self.get_vertical_sum(24),
+                    '=X1/M1',
+                    self.get_vertical_sum(26),
+                    '=Z1/O1',
+                    '=S1/H1',
+                    '',
+                    self.get_vertical_sum(30),
+                    self.get_vertical_sum(31),
+                    '=AE1/I1',
+                    '=AE1/T1',
+                    self.get_vertical_sum(34),
+                    '=AH1/K1',
+                    '=AH1/V1',
+                    self.get_vertical_sum(37),
+                    '=AK1/M1',
+                    '=AK1/X1',
+                    self.get_vertical_sum(40),
+                    '=AN1/O1',
+                    '=AN1/Z1',
+                    '=AD1/H1',
+                    '=AD1/S1',
+                    ''
+                ]
+            )
+        else:
+            rows.append(
+                [
+                    pipe,
+                    self.get_vertical_sum(2),
+                    self.get_vertical_sum(3),
+                    self.get_vertical_sum(4),
+                    self.get_vertical_sum(5),
+                    '',
+                    self.get_vertical_sum(7),
+                    self.get_vertical_sum(8),
+                    '=H1/C1',
+                    self.get_vertical_sum(10),
+                    '=J1/D1',
+                    self.get_vertical_sum(12),
+                    '=L1/E1',
+                    '=G1/B1',
+                    '',
+                    self.get_vertical_sum(16),
+                    self.get_vertical_sum(17),
+                    '=Q1/H1',
+                    self.get_vertical_sum(19),
+                    '=S1/J1',
+                    self.get_vertical_sum(21),
+                    '=U1/M1',
+                    '=P1/G1',
+                    '',
+                    self.get_vertical_sum(25),
+                    self.get_vertical_sum(26),
+                    '=Z1/H1',
+                    '=Z1/Q1',
+                    self.get_vertical_sum(29),
+                    '=AC1/J1',
+                    '=AC1/S1',
+                    self.get_vertical_sum(32),
+                    '=AF1/L1',
+                    '=AF1/U1',
+                    '=Y1/G1',
+                    '=Y1/P1',
+                    ''
+                ]
+            )
+        rows.append(
+            ['День'].extend(self.pipes_titles.get(pipe, []))
+        )
+        return rows
+
+    def get_vertical_sum(self, col):
+        return f'=СУММ({self.convert_num_to_letters(col)}3:{self.convert_num_to_letters(col)}40)'
     
     def get_formula_for_week(self, week_id, pipe, row_num):
         return f'=СУММ({self.convert_num_to_letters(week_id + 1)}{row_num + self.PIPELINES_DIFF.get(pipe, 0)}:{self.convert_num_to_letters(week_id + 7)}{row_num + self.PIPELINES_DIFF.get(pipe, 0)})'
