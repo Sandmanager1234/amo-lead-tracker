@@ -2,7 +2,7 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from loguru import logger
-from schedule import repeat, run_pending, every
+# from schedule import repeat, run_pending, every
 
 from kztime import get_local_datetime, get_last_week_list, get_today_info, get_last_month
 from google_sheets.google_sheets import GoogleSheets
@@ -95,13 +95,13 @@ def test():
     # print(len(shab[0]))
 
 
-@repeat(every(6).minutes)
+# @repeat(every(6).minutes)
 def main():
     asyncio.run(polling_pipelines())
 
 
 # Запуск приложения
 if __name__ == "__main__":
-    while True:
-        run_pending()
-    # main()
+    # while True:
+        # run_pending()
+    main()

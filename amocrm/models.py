@@ -122,7 +122,8 @@ class Tag:
         'FBONLINE',
         'WEB', 
         'OLIMP',
-        'PROG'
+        'PROG',
+        'wz'
     ]
     zvonobot_tags = [
         'звонобот',
@@ -134,11 +135,12 @@ class Tag:
         self.target_type = self.__get_target_type()
 
     def __get_target_type(self):
-        if self.is_other_city:
+
+        if self.is_other_city():
             return -1
-        elif self.is_target:
+        elif self.is_target():
             return 0
-        elif self.is_zvonobot:
+        elif self.is_zvonobot():
             return 1
         else:
             return 2
@@ -224,8 +226,8 @@ class Lead:
     updated_at : int
 
     after_processing_statuses = {
-        os.getenv('astana_pipeline'): ['62970105', '62970109', '62970113'],
-        os.getenv('almaty_pipeline'): ['63909053', '63909057', '63909061'],
+        os.getenv('astana_pipeline'): ['62970105', '62970109', '62970113', '78542789'],
+        os.getenv('almaty_pipeline'): ['63909053', '63909057', '63909061', '78542785'],
         os.getenv('pipeline_online'): ['68601325', '68601329', '68601333']
     }
     success_pipes = [os.getenv('pipeline_astana_success'), os.getenv('pipeline_almaty_success')]

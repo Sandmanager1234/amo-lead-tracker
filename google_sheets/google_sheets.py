@@ -23,7 +23,7 @@ class GoogleSheets:
             raise
 
     def get_sheet(self, month: int, year: int, today):
-        sheet_name = f'{self.tg.MONTH[month]} {year}'
+        sheet_name = f'{self.tg.MONTH[month]} (ОП) {year}'
         try:
             ws = self.table.worksheet(sheet_name)
             time.sleep(0.3)
@@ -39,7 +39,7 @@ class GoogleSheets:
     def create_worksheet(self, today):
         try:
             shablon, month = self.tg.create_shablon(today)
-            ws = self.table.add_worksheet(f'{self.tg.MONTH[month]} {today.year}', 256, 256)
+            ws = self.table.add_worksheet(f'{self.tg.MONTH[month]} (ОП) {today.year}', 256, 256)
             ws.insert_cols(shablon, value_input_option="USER_ENTERED")
             self.beautify_sheet(ws)
             time.sleep(1)
@@ -671,7 +671,7 @@ class GoogleSheets:
     def insert_leads_data(self, leads_data: dict, start_day: datetime):
         try:
             insert_data = {}
-            for _ in range(30):
+            for _ in range(31):
                 week_num, month, year = self.tg.get_weeknum(start_day)
                 week_num -= 1
                 weekday = start_day.date().isoweekday()
@@ -679,7 +679,7 @@ class GoogleSheets:
                     insert_data[year] = {}
                 if month not in insert_data[year]:
                     insert_data[year][month] = {}
-                    insert_data[year][month]['last_day'] = start_day.date().strftime("%d/%m/%Y")
+                    insert_data[year][month]['last_day'] = start_day
                     insert_data[year][month]['pipes'] = {}
                 for pipe in leads_data:
                     if pipe not in insert_data[year][month]['pipes']:
