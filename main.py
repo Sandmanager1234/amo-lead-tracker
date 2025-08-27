@@ -1,10 +1,11 @@
 import os
 import asyncio
+import datetime
 from dotenv import load_dotenv
 from loguru import logger
 from schedule import repeat, run_pending, every
 
-from kztime import get_local_datetime, get_last_week_list, get_today_info, get_last_month
+from kztime import get_today_info, get_last_month
 from google_sheets.google_sheets import GoogleSheets
 from amocrm.amocrm import AmoCRMClient
 from amocrm.models import Leads
@@ -53,23 +54,31 @@ amo_client = AmoCRMClient(
 
 async def polling_pipelines():
     amo_client.start_session()
-    start_ts, _, day = get_last_month()
+    _, _, day = get_last_month()
+    leads = Leads()
     try:
-        page = 1
-        response = await amo_client.get_last_month_leads(PIPES, start_ts)
-        await asyncio.sleep(0.3)
-        if response:
-            leads = Leads.from_json(response)
-            next = response.get('_links', {}).get('next', None)
-            while next:
-                page += 1
-                response = await amo_client.get_last_month_leads(PIPES, start_ts, page)
-                if response:
+        start_day = day
+        for i in range(31):
+            start_ts, end_ts, day = get_today_info(day)
+            page = 1
+            response = await amo_client.get_last_month_leads(PIPES, start_ts, end_ts)
+            await asyncio.sleep(0.3)
+            if response:
+                if i == 0:
+                    leads = Leads.from_json(response)
+                else:
                     leads.add_leads(Leads.from_json(response))
                 next = response.get('_links', {}).get('next', None)
-                await asyncio.sleep(0.2)
-        leads_data = leads.get_column_data(PIPES)
-        google.insert_leads_data(leads_data, day)
+                while next:
+                    page += 1
+                    response = await amo_client.get_last_month_leads(PIPES, start_ts, end_ts, page)
+                    if response:
+                        leads.add_leads(Leads.from_json(response))
+                    next = response.get('_links', {}).get('next', None)
+                    await asyncio.sleep(0.2)
+            leads_data = leads.get_column_data(PIPES)
+            day += datetime.timedelta(days=1)
+        google.insert_leads_data(leads_data, start_day)
         google.insert_leads_data_vertical(leads_data)
         # записать в гугол
     except Exception as ex: 

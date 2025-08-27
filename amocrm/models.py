@@ -321,14 +321,18 @@ class Leads:
     def __init__(self):
         self.leads : list[Lead] = []
         self.count = len(self.leads)
+        self.lead_ids = set()
 
     def __iter__(self) -> Generator[Lead, None, None]:
         for lead in self.leads:
             yield lead
 
     def add_leads(self, leads: 'Leads'):
-        self.leads.extend(leads.leads)
-        self.count += leads.count
+        for lead in leads:
+            if lead.id not in self.lead_ids:
+                self.lead_ids.add(lead.id)
+                self.leads.append(lead)
+        self.count = len(self.leads)
 
     def add_lead(self, lead: Lead):
         self.leads.append(lead)
