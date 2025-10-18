@@ -226,38 +226,34 @@ class GoogleSheets:
             for j in range(3):
                 for k in range(1, categories_count + 1):
                     if j == 2:
+                        index_1 = 2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + (3 * k) - 1
+                        index_2 = 2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 3 * k
+                        letter_1 = self.tg.convert_num_to_letters(index_1)
+                        letter_2 = self.tg.convert_num_to_letters(index_2)
                         percent_rows.append(
-                            f'{self.tg.convert_num_to_letters(
-                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + (3 * k) - 1
-                            )}:{self.tg.convert_num_to_letters(
-                                2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 3 * k
-                            )}'
+                            f'{letter_1}:{letter_2}'
                         )
                     else:
+                        index = 2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 2 * k
+                        letter = self.tg.convert_num_to_letters(index)
                         percent_rows.append(
-                            f'{self.tg.convert_num_to_letters(
-                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 2 * k
-                            )}:{self.tg.convert_num_to_letters(
-                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 2 * k
-                            )}'
+                            f'{letter}:{letter}'
                         )
+                l1 = self.tg.convert_num_to_letters(2 + categories_count * 3 + 3)
                 percent_rows.append(
-                    f'{self.tg.convert_num_to_letters(
-                        2 + categories_count * 3 + 3
-                    )}:{self.tg.convert_num_to_letters(
-                        2 + categories_count * 3 + 3
-                    )}'
+                    f'{l1}:{l1}'
                 )
-                percent_rows.append(f'{self.tg.convert_num_to_letters(
+                l2 = self.tg.convert_num_to_letters(
                     2 + categories_count * 5 + 6
-                )}:{self.tg.convert_num_to_letters(
-                    2 + categories_count * 5 + 6 
-                )}')
-                percent_rows.append(f'{self.tg.convert_num_to_letters(
+                )
+                percent_rows.append(f'{l2}:{l2}')
+                l3 = self.tg.convert_num_to_letters(
                     2 + categories_count * 8 + 9
-                )}:{self.tg.convert_num_to_letters(
+                )
+                l4 = self.tg.convert_num_to_letters(
                     2 + categories_count * 8 + 10
-                )}')
+                )
+                percent_rows.append(f'{l3}:{l4}')
             ws.format(
                 percent_rows, 
                 {
@@ -688,20 +684,15 @@ class GoogleSheets:
                 for j in range(3):
                     for k in range(1, min_size + 1):
                         if j == 2:
+                            index_1 = diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + (3 * k) - 1
+                            index_2 = diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 3 * k
                             percent_rows.append(
-                                f'{
-                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + (3 * k) - 1
-                                }:{
-                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 3 * k
-                                }'
+                                f'{index_1}:{index_2}'
                             )
                         else:
+                            index = diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 2 * k
                             percent_rows.append(
-                                f'{
-                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 2 * k
-                                }:{
-                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 2 * k
-                                }'
+                                f'{index}:{index}'
                             )
                 percent_rows.append(f'{5 + min_size * 3 + 3 + diff * i}:{5 + min_size * 3 + 3 + diff * i}')
                 percent_rows.append(f'{5 + min_size * 5 + 6 + diff * i}:{5 + min_size * 5 + 6 + diff * i}')
