@@ -227,27 +227,19 @@ class GoogleSheets:
                 for k in range(1, categories_count + 1):
                     if j == 2:
                         percent_rows.append(
-                            f'{
-                                self.tg.convert_num_to_letters(
+                            f'{self.tg.convert_num_to_letters(
                                     2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + (3 * k) - 1
-                                )
-                            }:{
-                                self.tg.convert_num_to_letters(
-                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 3 * k
-                                )
-                            }'
+                            )}:{self.tg.convert_num_to_letters(
+                                2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 3 * k
+                            )}'
                         )
                     else:
                         percent_rows.append(
-                            f'{
-                                self.tg.convert_num_to_letters(
+                            f'{self.tg.convert_num_to_letters(
                                     2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 2 * k
-                                )
-                            }:{
-                                self.tg.convert_num_to_letters(
+                            )}:{self.tg.convert_num_to_letters(
                                     2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 2 * k
-                                )
-                            }'
+                            )}'
                         )
                 percent_rows.append(
                     f'{self.tg.convert_num_to_letters(
