@@ -1,105 +1,13 @@
 import calendar
 import datetime
-
+from google_sheets.shablon import groups, categories, categories_online
 
 class TemplateGenerator:
 
-    __rows_title = [
-        'Кол-во лидов общее',
-        'Кол-во лидов таргет',
-        'Кол-во лидов звонобот',
-        'Кол-во лидов прочее',
-        '',
-        'Кол-во обработанных лидов',
-        'Кол-во обработанных лидов таргет',
-        '% обработки таргет',
-        'Кол-во обработанных лидов звонобот',
-        '% обработки звонобот',
-        'Кол-во обработанных лидов прочее',
-        '% обработки прочее',
-        '% обработки',
-        '',
-        'Кол-во квал лидов',
-        'Кол-во квал лидов таргет',
-        'Квалификация таргет',
-        'Кол-во квал лидов звонобот',
-        'Квалификация звонобот',
-        'Кол-во квал лидов прочее',
-        'Квалификация прочее',
-        '% Квалификации',
-        '',
-        'Кол-во успешек',
-        'Кол-во успешек таргет',
-        '% продаж с таргета',
-        '% продаж с таргета с квала',
-        'Кол-во успешек звонобот',
-        '% продаж с звонобот',
-        '% продаж с звонобот с квала',
-        'Кол-во успешек прочее',
-        '% продаж с прочее',
-        '% продаж с прочее с квала',
-        'Конверсия из лида в продажу',
-        'Конверсия из квал-лида в продажу',
-        ''
-    ]
-    
-    __rows_title_online = [
-        'Кол-во лидов общее',
-        'Кол-во лидов таргет',
-        'Кол-во лидов звонобот',
-        'Кол-во лидов Другой город',
-        'Кол-во лидов прочее',
-        '',
-        'Кол-во обработанных лидов',
-        'Кол-во обработанных лидов таргет',
-        '% обработки таргет',
-        'Кол-во обработанных лидов звонобот',
-        '% обработки звонобот',
-        'Кол-во обработанных лидов Другой город',
-        '% обработки Другой город',
-        'Кол-во обработанных лидов прочее',
-        '% обработки прочее',
-        '% обработки',
-        '',
-        'Кол-во квал лидов',
-        'Кол-во квал лидов таргет',
-        'Квалификация таргет',
-        'Кол-во квал лидов звонобот',
-        'Квалификация звонобот',
-        'Кол-во квал лидов Другой город',
-        'Квалификация Другой город',
-        'Кол-во квал лидов прочее',
-        'Квалификация прочее',
-        '% Квалификации',
-        '',
-        'Кол-во успешек',
-        'Кол-во успешек таргет',
-        '% продаж с таргета',
-        '% продаж с таргета с квала',
-        'Кол-во успешек звонобот',
-        '% продаж с звонобот',
-        '% продаж с звонобот с квала',
-        'Кол-во успешек Другой город',
-        '% продаж с Другой город',
-        '% продаж с Другой город с квала',
-        'Кол-во успешек прочее',
-        '% продаж с прочее',
-        '% продаж с прочее с квала',
-        'Конверсия из лида в продажу',
-        'Конверсия из квал-лида в продажу',
-        ''
-    ]
-    
     pipe_names_rus = {
         'astana': 'Астана',
-        'almaty': 'Алматы',
+        'almaty': 'Алмата',
         'online': 'Онлайн'
-    }
-    
-    pipes_titles = {
-        'Алмата': __rows_title,
-        'Астана': __rows_title,
-        'Онлайн': __rows_title_online
     }
     
     WEEK_NAMES = {
@@ -129,12 +37,20 @@ class TemplateGenerator:
 
     PIPELINES_DIFF = {
         'Алмата': 0,
-        'Астана': 40,
-        'Онлайн': 80,
+        'Астана': 120,
+        'Онлайн': 240,
         'almaty': 0,
-        'astana': 40,
-        'online': 80
+        'astana': 120,
+        'online': 240
     }
+    pipes_diff = {
+        'Алмата': 0,
+        'Астана': 120,
+        'Онлайн': 240,
+    }
+
+    def __init__(self):
+        self.temp = self._get_temp()
 
 
     def get_week_month(self, today: datetime.datetime):
@@ -188,7 +104,7 @@ class TemplateGenerator:
         col_count = 5 + 9 * weeks_num
         cols = [[] for _ in range(col_count)]
         
-        for pipe in self.pipes_titles: 
+        for pipe, diff in self.pipes_diff.items(): 
             cols[0].extend(
                 [
                     f'{pipe} {self.MONTH[month]}',
@@ -196,19 +112,19 @@ class TemplateGenerator:
                     'Метрики', 
                     '', 
                     'Общая статистика',
-                    *['' for _ in range(4 if pipe != 'Онлайн' else 5)],
+                    *['' for _ in range(len(categories) + 1 if pipe != 'Онлайн' else len(categories_online) + 1)],
                     'Обработанные лиды',
-                    *['' for _ in range(8 if pipe != 'Онлайн' else 10)],
+                    *['' for _ in range(len(categories) * 2 + 2 if pipe != 'Онлайн' else len(categories_online) * 2 + 2)],
                     'Квал лиды',
-                    *['' for _ in range(8 if pipe != 'Онлайн' else 10)],
+                    *['' for _ in range(len(categories) * 2 + 2 if pipe != 'Онлайн' else len(categories_online) * 2 + 2)],
                     'Успешные лиды',
-                    *['' for _ in range(12 if pipe != 'Онлайн' else 14)]
+                    *['' for _ in range(len(categories) * 3 + 3 if pipe != 'Онлайн' else len(categories_online) * 3 + 3)]
                 ]
             )
             cols[1].extend(
                 [
                     *['' for _ in range(4)],
-                    *self.pipes_titles.get(pipe, [])
+                    *self._get_title_row(pipe)
                 ]
             )
             cols[2].extend(
@@ -216,113 +132,26 @@ class TemplateGenerator:
                     '', 
                     '', 
                     'План', 
-                    *['' for _ in range(37)]
+                    '',
+                    *['' for _ in range(len(categories) * 8 + 12 if pipe != 'Онлайн' else len(categories_online) * 8 + 12)]
                 ]
             )
-            if pipe != 'Онлайн':
-                cols[3].extend(
-                    [
-                        '', 
-                        '', 
-                        'Факт',
-                        '',
-                        self.get_formula_row(weeks_ids, 5 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 6 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 7 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 8 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        '',
-                        self.get_formula_row(weeks_ids, 10 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 11 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{11 + self.PIPELINES_DIFF.get(pipe, 0)}/D{6 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 13 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{13 + self.PIPELINES_DIFF.get(pipe, 0)}/D{7 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 15 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{15 + self.PIPELINES_DIFF.get(pipe, 0)}/D{8 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{10 + self.PIPELINES_DIFF.get(pipe, 0)}/D{5 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        '',
-                        self.get_formula_row(weeks_ids, 19 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 20 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{20 + self.PIPELINES_DIFF.get(pipe, 0)}/D{11 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 22 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{22 + self.PIPELINES_DIFF.get(pipe, 0)}/D{13 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 24 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{24 + self.PIPELINES_DIFF.get(pipe, 0)}/D{15 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{19 + self.PIPELINES_DIFF.get(pipe, 0)}/D{10 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        '',
-                        self.get_formula_row(weeks_ids, 28 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 29 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{29 + self.PIPELINES_DIFF.get(pipe, 0)}/D{11 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{29 + self.PIPELINES_DIFF.get(pipe, 0)}/D{20 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 32 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{32 + self.PIPELINES_DIFF.get(pipe, 0)}/D{13 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{32 + self.PIPELINES_DIFF.get(pipe, 0)}/D{22 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 35 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{35 + self.PIPELINES_DIFF.get(pipe, 0)}/D{15 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{35 + self.PIPELINES_DIFF.get(pipe, 0)}/D{24 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{28 + self.PIPELINES_DIFF.get(pipe, 0)}/D{10 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{28 + self.PIPELINES_DIFF.get(pipe, 0)}/D{19 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        ''
-                    ]
-                )
-            else:
-                cols[3].extend(
-                    [
-                        '', 
-                        '', 
-                        'Факт',
-                        '',
-                        self.get_formula_row(weeks_ids, 5 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 6 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 7 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 8 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 9 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        '',
-                        self.get_formula_row(weeks_ids, 11 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 12 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{12 + self.PIPELINES_DIFF.get(pipe, 0)}/D{6 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 14 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{14 + self.PIPELINES_DIFF.get(pipe, 0)}/D{7 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 16 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{16 + self.PIPELINES_DIFF.get(pipe, 0)}/D{8 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 18 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{18 + self.PIPELINES_DIFF.get(pipe, 0)}/D{9 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{11 + self.PIPELINES_DIFF.get(pipe, 0)}/D{5 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        '',
-                        self.get_formula_row(weeks_ids, 22 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 23 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{23 + self.PIPELINES_DIFF.get(pipe, 0)}/D{12 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 25 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{25 + self.PIPELINES_DIFF.get(pipe, 0)}/D{14 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 27 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{27 + self.PIPELINES_DIFF.get(pipe, 0)}/D{16 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 29 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{29 + self.PIPELINES_DIFF.get(pipe, 0)}/D{18 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{22 + self.PIPELINES_DIFF.get(pipe, 0)}/D{11 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        '',
-                        self.get_formula_row(weeks_ids, 33 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        self.get_formula_row(weeks_ids, 34 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{34 + self.PIPELINES_DIFF.get(pipe, 0)}/D{12 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{34 + self.PIPELINES_DIFF.get(pipe, 0)}/D{23 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 37 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{37 + self.PIPELINES_DIFF.get(pipe, 0)}/D{14 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{37 + self.PIPELINES_DIFF.get(pipe, 0)}/D{25 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 40 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{40 + self.PIPELINES_DIFF.get(pipe, 0)}/D{16 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{40 + self.PIPELINES_DIFF.get(pipe, 0)}/D{27 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        self.get_formula_row(weeks_ids, 43 + self.PIPELINES_DIFF.get(pipe, 0)),
-                        f'=D{43 + self.PIPELINES_DIFF.get(pipe, 0)}/D{18 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{43 + self.PIPELINES_DIFF.get(pipe, 0)}/D{29 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{33 + self.PIPELINES_DIFF.get(pipe, 0)}/D{11 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        f'=D{33 + self.PIPELINES_DIFF.get(pipe, 0)}/D{22 + self.PIPELINES_DIFF.get(pipe, 0)}',
-                        ''
-                    ]
-                )
+            cols[3].extend(
+                [
+                    '', 
+                    '', 
+                    'Факт',
+                    '', 
+                    *self._get_formulas_rows(pipe, diff, weeks_ids)
+                ]
+            )
             cols[4].extend(
                 [
                     '', 
                     '', 
                     'Проекция', 
-                    *['' for _ in range(37)]
+                    '',
+                    *['' for _ in range(len(categories) * 8 + 12 if pipe != 'Онлайн' else len(categories_online) * 8 + 12)]
                 ]
             )
             for i, week in enumerate(weeks):
@@ -332,241 +161,215 @@ class TemplateGenerator:
                         '', 
                         f'Неделя - {i + 1}', 
                         'План',
-                        *['' for _ in range(36)]
+                        *['' for _ in range(len(categories) * 8 + 12 if pipe != 'Онлайн' else len(categories_online) * 8 + 12)]
                     ]
                 )
                 week_id = weeks_ids[i]
-                if pipe == 'Онлайн':
-                    cols[6 + 9 * i].extend(
-                        [
-                            '', 
-                            '', 
-                            '', 
-                            'Факт',
-                            self.get_formula_for_week(week_id, pipe, 5),
-                            self.get_formula_for_week(week_id, pipe, 6),
-                            self.get_formula_for_week(week_id, pipe, 7),
-                            self.get_formula_for_week(week_id, pipe, 8),
-                            self.get_formula_for_week(week_id, pipe, 9),
-                            '',
-                            self.get_formula_for_week(week_id, pipe, 11),
-                            self.get_formula_for_week(week_id, pipe, 12),
-                            self.get_div_formula_for_week(week_id, pipe, 12, 6),
-                            self.get_formula_for_week(week_id, pipe, 14),
-                            self.get_div_formula_for_week(week_id, pipe, 14, 7),
-                            self.get_formula_for_week(week_id, pipe, 16),
-                            self.get_div_formula_for_week(week_id, pipe, 16, 8),
-                            self.get_formula_for_week(week_id, pipe, 18),
-                            self.get_div_formula_for_week(week_id, pipe, 18, 9),
-                            self.get_div_formula_for_week(week_id, pipe, 11, 5),
-                            '',
-                            self.get_formula_for_week(week_id, pipe, 22),
-                            self.get_formula_for_week(week_id, pipe, 23),
-                            self.get_div_formula_for_week(week_id, pipe, 23, 12),
-                            self.get_formula_for_week(week_id, pipe, 25),
-                            self.get_div_formula_for_week(week_id, pipe, 25, 14),
-                            self.get_formula_for_week(week_id, pipe, 27),
-                            self.get_div_formula_for_week(week_id, pipe, 27, 16),
-                            self.get_formula_for_week(week_id, pipe, 29),
-                            self.get_div_formula_for_week(week_id, pipe, 29, 18),
-                            self.get_div_formula_for_week(week_id, pipe, 22, 11),
-                            '',
-                            self.get_formula_for_week(week_id, pipe, 33),
-                            self.get_formula_for_week(week_id, pipe, 34),
-                            self.get_div_formula_for_week(week_id, pipe, 34, 12),
-                            self.get_div_formula_for_week(week_id, pipe, 34, 23),
-                            self.get_formula_for_week(week_id, pipe, 37),
-                            self.get_div_formula_for_week(week_id, pipe, 37, 14),
-                            self.get_div_formula_for_week(week_id, pipe, 37, 25),
-                            self.get_formula_for_week(week_id, pipe, 40),
-                            self.get_div_formula_for_week(week_id, pipe, 40, 27),
-                            self.get_formula_for_week(week_id, pipe, 43),
-                            self.get_div_formula_for_week(week_id, pipe, 43, 18),
-                            self.get_div_formula_for_week(week_id, pipe, 43, 29),
-                            self.get_div_formula_for_week(week_id, pipe, 33, 11),
-                            self.get_div_formula_for_week(week_id, pipe, 33, 22),
-                            ''
-                        ]
-                    )
-                else:
-                    cols[6 + 9 * i].extend(
-                        [
-                            '', 
-                            '', 
-                            '', 
-                            'Факт',
-                            self.get_formula_for_week(week_id, pipe, 5),
-                            self.get_formula_for_week(week_id, pipe, 6),
-                            self.get_formula_for_week(week_id, pipe, 7),
-                            self.get_formula_for_week(week_id, pipe, 8),
-                            '',
-                            self.get_formula_for_week(week_id, pipe, 10),
-                            self.get_formula_for_week(week_id, pipe, 11),
-                            self.get_div_formula_for_week(week_id, pipe, 11, 6),
-                            self.get_formula_for_week(week_id, pipe, 13),
-                            self.get_div_formula_for_week(week_id, pipe, 13, 7),
-                            self.get_formula_for_week(week_id, pipe, 15),
-                            self.get_div_formula_for_week(week_id, pipe, 15, 8),
-                            self.get_div_formula_for_week(week_id, pipe, 10, 5),
-                            '',
-                            self.get_formula_for_week(week_id, pipe, 19),
-                            self.get_formula_for_week(week_id, pipe, 20),
-                            self.get_div_formula_for_week(week_id, pipe, 20, 11),
-                            self.get_formula_for_week(week_id, pipe, 22),
-                            self.get_div_formula_for_week(week_id, pipe, 22, 13),
-                            self.get_formula_for_week(week_id, pipe, 24),
-                            self.get_div_formula_for_week(week_id, pipe, 24, 15),
-                            self.get_div_formula_for_week(week_id, pipe, 19, 10),
-                            '',
-                            self.get_formula_for_week(week_id, pipe, 28),
-                            self.get_formula_for_week(week_id, pipe, 29),
-                            self.get_div_formula_for_week(week_id, pipe, 29, 11),
-                            self.get_div_formula_for_week(week_id, pipe, 29, 20),
-                            self.get_formula_for_week(week_id, pipe, 32),
-                            self.get_div_formula_for_week(week_id, pipe, 32, 13),
-                            self.get_div_formula_for_week(week_id, pipe, 32, 22),
-                            self.get_formula_for_week(week_id, pipe, 35),
-                            self.get_div_formula_for_week(week_id, pipe, 35, 15),
-                            self.get_div_formula_for_week(week_id, pipe, 35, 24),
-                            self.get_div_formula_for_week(week_id, pipe, 28, 10),
-                            self.get_div_formula_for_week(week_id, pipe, 28, 19),
-                            ''
-                        ]
-                    )
+                cols[6 + 9 * i].extend(
+                    [
+                        '', 
+                        '', 
+                        '', 
+                        'Факт',
+                        *self._get_week_formulas_rows(pipe, diff, week_id)
+                    ]
+                )
                 counter = 1
                 for j, day in enumerate(week):
-                    diff = 0
+                    _diff = 0
                     if day == 0:
                         day = counter
                         counter += 1
-                        diff = 1
+                        _diff = 1
                     cols[7 + j + 9 * i].extend(
                         [
                             '',
                             '',
-                            f'{day}.{month + diff}',
+                            f'{day}.{month + _diff}',
                             f'{self.WEEK_NAMES[j + 1]}',
-                            *['' for _ in range(36)]
+                            *['' for _ in range(len(categories) * 8 + 12 if pipe != 'Онлайн' else len(categories_online) * 8 + 12)]
                         ]
                     )
         return cols, month
     
+    def _get_temp(self):
+        temp = {}
+        for pipe_name, pipe_diff in self.pipes_diff.items():
+            pipe_index = 5 + pipe_diff
+            if pipe_name not in temp:
+                temp[pipe_name] = {}
+            if pipe_name != 'Онлайн':
+                cats = categories
+            else:
+                cats = categories_online
+            field_num = 0
+            for group_name, group in groups.items():
+                if group_name not in temp[pipe_name]:
+                    temp[pipe_name][group_name] = {}
+                for field_name, field_info in group['base'].items():
+                    if field_name == 'categories':
+                        for cat in cats:
+                            fields = field_info['fields']
+                            for field in fields:
+                                if group_name not in temp[pipe_name][group_name] and field['type'] == 'count':
+                                    temp[pipe_name][group_name][cat] = field_num + pipe_index
+                                field_num += 1
+                    else:
+                        if group_name not in temp[pipe_name][group_name] and field_info['type'] == 'count':
+                            temp[pipe_name][group_name][field_name] = field_num + pipe_index
+                        field_num += 1
+                field_num += 1
+        return temp
+    
+    def _get_title_row(self, pipe_name):
+        rows = []
+        pipe_name = self.pipe_names_rus.get(pipe_name, pipe_name)
+        if pipe_name != 'Онлайн':
+            cats = categories
+        else:
+            cats = categories_online
+        for _, group in groups.items():
+            for field_name, field_info in group['base'].items():
+                if field_name == 'categories':
+                    for cat in cats:
+                        fields = field_info['fields']
+                        for field in fields:
+                            rows.append(' '.join([field.get('prefix', ''), cat, field.get('postfix', '')]))
+                else:
+                    rows.append(field_info['title'])
+            rows.append('')
+        return rows
+    
+    def _get_formulas_rows(self, pipe_name, pipe_diff, week_ids):
+        rows = []
+        pipe_index = 5 + pipe_diff
+        pipe_name = self.pipe_names_rus.get(pipe_name, pipe_name)
+        if pipe_name != 'Онлайн':
+            cats = categories
+        else:
+            cats = categories_online
+        field_num = 0
+        for _, group in groups.items():
+            for field_name, field_info in group['base'].items():
+                if field_name == 'categories':
+                    for cat in cats:
+                        fields = field_info['fields']
+                        for field in fields:
+                            if field['type'] == 'ratio':
+                                a = self.temp[pipe_name][field['a']][cat]
+                                b = self.temp[pipe_name][field['b']][cat]
+                                rows.append(f"=D{a}/D{b}")
+                            else:
+                                rows.append(self.get_formula_row(week_ids, pipe_index + field_num))
+                            field_num += 1
+                else:
+                    if field_info['type'] == 'ratio':
+                        a = self.temp[pipe_name][field_info['a']][cat]
+                        b = self.temp[pipe_name][field_info['b']][cat]
+                        rows.append(f"=D{a}/D{b}")
+                    else:
+                        rows.append(self.get_formula_row(week_ids, pipe_index + field_num))
+                    field_num += 1
+            rows.append('')
+            field_num += 1
+        return rows
+    
+    def _get_week_formulas_rows(self, pipe_name, pipe_diff, week_id):
+        rows = []
+        pipe_index = 5 + pipe_diff
+        pipe_name = self.pipe_names_rus.get(pipe_name, pipe_name)
+        if pipe_name != 'Онлайн':
+            cats = categories
+        else:
+            cats = categories_online
+        field_num = 0
+        for _, group in groups.items():
+            for field_name, field_info in group['base'].items():
+                if field_name == 'categories':
+                    for cat in cats:
+                        fields = field_info['fields']
+                        for field in fields:
+                            if field['type'] == 'ratio':
+                                a = self.temp[pipe_name][field['a']][cat]
+                                b = self.temp[pipe_name][field['b']][cat]
+                                rows.append(self.get_div_formula_for_week(week_id, a, b))
+                            else:
+                                rows.append(self.get_formula_for_week(week_id, pipe_index + field_num))
+                            field_num += 1
+                else:
+                    if field_info['type'] == 'ratio':
+                        a = self.temp[pipe_name][field_info['a']][cat]
+                        b = self.temp[pipe_name][field_info['b']][cat]
+                        rows.append(self.get_div_formula_for_week(week_id, a, b))
+                    else:
+                        rows.append(self.get_formula_for_week(week_id, pipe_index + field_num))
+                    field_num += 1
+            rows.append('')
+            field_num += 1
+        return rows
+    
+    
     def create_vertical_shablon(self, pipe):
         rows = []
-        if pipe == 'online':
-            rows.append(
-                [
-                    pipe,
-                    self.get_vertical_sum(2),
-                    self.get_vertical_sum(3),
-                    self.get_vertical_sum(4),
-                    self.get_vertical_sum(5),
-                    self.get_vertical_sum(6),
-                    '',
-                    self.get_vertical_sum(8),
-                    self.get_vertical_sum(9),
-                    '=I1/C1',
-                    self.get_vertical_sum(11),
-                    '=K1/D1',
-                    self.get_vertical_sum(13),
-                    '=M1/E1',
-                    self.get_vertical_sum(15),
-                    '=O1/F1',
-                    '=H1/B1',
-                    '',
-                    self.get_vertical_sum(19),
-                    self.get_vertical_sum(20),
-                    '=T1/I1',
-                    self.get_vertical_sum(22),
-                    '=V1/K1',
-                    self.get_vertical_sum(24),
-                    '=X1/M1',
-                    self.get_vertical_sum(26),
-                    '=Z1/O1',
-                    '=S1/H1',
-                    '',
-                    self.get_vertical_sum(30),
-                    self.get_vertical_sum(31),
-                    '=AE1/I1',
-                    '=AE1/T1',
-                    self.get_vertical_sum(34),
-                    '=AH1/K1',
-                    '=AH1/V1',
-                    self.get_vertical_sum(37),
-                    '=AK1/M1',
-                    '=AK1/X1',
-                    self.get_vertical_sum(40),
-                    '=AN1/O1',
-                    '=AN1/Z1',
-                    '=AD1/H1',
-                    '=AD1/S1',
-                    ''
-                ]
-            )
-        else:
-            rows.append(
-                [
-                    self.pipe_names_rus[pipe],
-                    self.get_vertical_sum(2),
-                    self.get_vertical_sum(3),
-                    self.get_vertical_sum(4),
-                    self.get_vertical_sum(5),
-                    '',
-                    self.get_vertical_sum(7),
-                    self.get_vertical_sum(8),
-                    '=H1/C1',
-                    self.get_vertical_sum(10),
-                    '=J1/D1',
-                    self.get_vertical_sum(12),
-                    '=L1/E1',
-                    '=G1/B1',
-                    '',
-                    self.get_vertical_sum(16),
-                    self.get_vertical_sum(17),
-                    '=Q1/H1',
-                    self.get_vertical_sum(19),
-                    '=S1/J1',
-                    self.get_vertical_sum(21),
-                    '=U1/M1',
-                    '=P1/G1',
-                    '',
-                    self.get_vertical_sum(25),
-                    self.get_vertical_sum(26),
-                    '=Z1/H1',
-                    '=Z1/Q1',
-                    self.get_vertical_sum(29),
-                    '=AC1/J1',
-                    '=AC1/S1',
-                    self.get_vertical_sum(32),
-                    '=AF1/L1',
-                    '=AF1/U1',
-                    '=Y1/G1',
-                    '=Y1/P1',
-                    ''
-                ]
-            )
+        rows.append([self.pipe_names_rus[pipe], *self._get_vertical_formulas(pipe)])
         row_titles = ['День']
-        if pipe != 'online':
-            row_titles.extend(self.__rows_title)
+        row_titles.extend(self._get_title_row(pipe))
+        rows.append(row_titles)
+        return rows
+    
+    def _get_vertical_formulas(self, pipe_name):
+        rows = []
+        diff = 2
+        pipe_name = self.pipe_names_rus.get(pipe_name, pipe_name)
+        ubrat = 5 + self.PIPELINES_DIFF[pipe_name]
+        if pipe_name != 'Онлайн':
+            cats = categories
         else:
-            row_titles.extend(self.__rows_title_online)
-        rows.append(
-            row_titles
-        )
+            cats = categories_online
+        field_num = 0
+        for _, group in groups.items():
+            for field_name, field_info in group['base'].items():
+                if field_name == 'categories':
+                    for cat in cats:
+                        fields = field_info['fields']
+                        for field in fields:
+                            if field['type'] == 'ratio':
+                                a = self.temp[pipe_name][field['a']][cat] - ubrat + diff
+                                b = self.temp[pipe_name][field['b']][cat] - ubrat + diff
+                                rows.append(self.get_vertical_ratio(a, b))
+                            else:
+                                rows.append(self.get_vertical_sum(diff + field_num))
+                            field_num += 1
+                else:
+                    if field_info['type'] == 'ratio':
+                        a = self.temp[pipe_name][field_info['a']][cat] - ubrat + diff
+                        b = self.temp[pipe_name][field_info['b']][cat] - ubrat + diff
+                        rows.append(self.get_vertical_ratio(a, b))
+                    else:
+                        rows.append(self.get_vertical_sum(diff + field_num))
+                    field_num += 1
+            rows.append('')
+            field_num += 1
         return rows
 
     def get_vertical_sum(self, col):
         return f'=СУММ({self.convert_num_to_letters(col)}3:{self.convert_num_to_letters(col)}40)'
     
-    def get_formula_for_week(self, week_id, pipe, row_num):
-        return f'=СУММ({self.convert_num_to_letters(week_id + 1)}{row_num + self.PIPELINES_DIFF.get(pipe, 0)}:{self.convert_num_to_letters(week_id + 7)}{row_num + self.PIPELINES_DIFF.get(pipe, 0)})'
+    def get_vertical_ratio(self, a, b):
+        return f'={self.convert_num_to_letters(a)}1/{self.convert_num_to_letters(b)}1'
+    
+    def get_formula_for_week(self, week_id, row_num):
+        return f'=СУММ({self.convert_num_to_letters(week_id + 1)}{row_num}:{self.convert_num_to_letters(week_id + 7)}{row_num})'
 
-    def get_div_formula_for_week(self, week_id, pipe, dividend, divisor):
-        return f'={self.convert_num_to_letters(week_id)}{dividend + self.PIPELINES_DIFF.get(pipe, 0)}/{self.convert_num_to_letters(week_id)}{divisor + self.PIPELINES_DIFF.get(pipe, 0)}'
+    def get_div_formula_for_week(self, week_id, dividend, divisor):
+        return f'={self.convert_num_to_letters(week_id)}{dividend}/{self.convert_num_to_letters(week_id)}{divisor}'
 
-    def get_div_col_formula(self, week_num, pipe, day, dividend, divisor):
+    def get_div_col_formula(self, week_num, day, dividend, divisor):
         week_id = 7 + 9 * week_num
-        return f'={self.convert_num_to_letters(week_id + day)}{dividend + self.PIPELINES_DIFF.get(pipe, 0)}/{self.convert_num_to_letters(week_id + day)}{divisor + self.PIPELINES_DIFF.get(pipe, 0)}'
+        return f'={self.convert_num_to_letters(week_id + day)}{dividend}/{self.convert_num_to_letters(week_id + day)}{divisor}'
+    
+    def get_vertical_div_col_formula(self, day, dividend, divisor):
+        return f'={self.convert_num_to_letters(dividend)}{2 + day}/{self.convert_num_to_letters(divisor)}{2 + day}'
 
     def convert_num_to_letters(self, last_index):
         if last_index:

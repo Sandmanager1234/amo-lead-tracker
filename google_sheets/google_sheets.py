@@ -7,6 +7,11 @@ from gspread_formatting import set_frozen, set_column_width
 from loguru import logger
 
 from google_sheets.template_generator import TemplateGenerator
+from google_sheets.shablon import categories, categories_online, groups
+
+# from template_generator import TemplateGenerator
+# from shablon import categories, categories_online, groups
+
 
 load_dotenv()
 
@@ -39,7 +44,7 @@ class GoogleSheets:
     def create_worksheet(self, today):
         try:
             shablon, month = self.tg.create_shablon(today)
-            ws = self.table.add_worksheet(f'{self.tg.MONTH[month]} (ОП) {today.year}', 256, 256)
+            ws = self.table.add_worksheet(f'{self.tg.MONTH[month]} (ОП) {today.year}', (5 + len(categories_online) * 8 + 11) * 3, 52)
             ws.insert_cols(shablon, value_input_option="USER_ENTERED")
             self.beautify_sheet(ws)
             time.sleep(1)
@@ -66,7 +71,7 @@ class GoogleSheets:
     def create_vertical_worksheet(self, sheet_name: str, pipe):
         try:
             shablon = self.tg.create_vertical_shablon(pipe)
-            ws = self.table.add_worksheet(sheet_name, 128, 128)
+            ws = self.table.add_worksheet(sheet_name, 45, 45)
             ws.insert_rows(shablon, value_input_option="USER_ENTERED")
             self.beautify_vertical_sheet(ws, pipe=='online')
             return ws
@@ -90,9 +95,13 @@ class GoogleSheets:
                 }
             )
             # color to blue
+            if is_online:
+                categories_count = len(categories_online)
+            else:
+                categories_count = len(categories)
             ws.format(
                 [
-                    'B2:F33' if is_online else 'B2:E33'
+                    f'{self.tg.convert_num_to_letters(2)}2:{self.tg.convert_num_to_letters(2 + categories_count)}33'
                 ],
                 {
                     "backgroundColor": {
@@ -105,7 +114,7 @@ class GoogleSheets:
             # PURPLE
             ws.format(
                 [
-                    'H2:Q33' if is_online else 'G2:N33'
+                    f'{self.tg.convert_num_to_letters(4 + categories_count)}2:{self.tg.convert_num_to_letters(5 + categories_count * 3)}33'
                 ],
                 {
                     "backgroundColor": {
@@ -119,7 +128,7 @@ class GoogleSheets:
             # YELLOW
             ws.format(
                 [
-                    'S2:AB33' if is_online else 'P2:W33'
+                    f'{self.tg.convert_num_to_letters(7 + categories_count * 3)}2:{self.tg.convert_num_to_letters(8 + categories_count * 5)}33'
                 ],
                 {
                     "backgroundColor": {
@@ -132,7 +141,7 @@ class GoogleSheets:
             # GREEN
             ws.format(
                 [
-                    'AD2:AR33' if is_online else 'Y2:AJ33'
+                    f'{self.tg.convert_num_to_letters(10 + categories_count * 5)}2:{self.tg.convert_num_to_letters(12 + categories_count * 8)}33'
                 ],
                 {
                     "backgroundColor": {
@@ -144,9 +153,9 @@ class GoogleSheets:
             )
             # color cells to rgb(102, 102, 102) GREY
             ws.format([
-                    'G2:G33' if is_online else 'F2:F33',
-                    'R2:R33' if is_online else 'O2:O33',
-                    'AC2:AC33' if is_online else 'X2:X33'
+                    f'{self.tg.convert_num_to_letters(3 + categories_count)}2:{self.tg.convert_num_to_letters(3 + categories_count)}33',
+                    f'{self.tg.convert_num_to_letters(6 + categories_count * 3)}2:{self.tg.convert_num_to_letters(6 + categories_count * 3)}33',
+                    f'{self.tg.convert_num_to_letters(9 + categories_count * 5)}2:{self.tg.convert_num_to_letters(9 + categories_count * 5)}33',
                 ], {
                     "backgroundColor": {
                             "red": 0.4,
@@ -158,7 +167,7 @@ class GoogleSheets:
             time.sleep(0.7)
             ws.format( #ALL
                 [
-                    'A1:AR33' if is_online else 'A1:AJ33',
+                    f'A1:{self.tg.convert_num_to_letters(12 + categories_count * 8)}33',
                 ],
                 {
                 'borders': {
@@ -179,7 +188,7 @@ class GoogleSheets:
             )
             ws.format( #BOTTOM
                 [
-                    'A2:AR2' if is_online else 'A2:AJ2',
+                    f'A2:{self.tg.convert_num_to_letters(12 + categories_count * 8)}2',
                 ],
                 {
                 'borders': {
@@ -199,7 +208,7 @@ class GoogleSheets:
                 }
             )
             time.sleep(0.6)
-            ws.format(['A1:AR33'], {     
+            ws.format([f'A1:{self.tg.convert_num_to_letters(12 + categories_count * 8)}33'], {     
                 'wrapStrategy': 'WRAP',
                 'horizontalAlignment': 'CENTER',
                 "verticalAlignment": 'MIDDLE'
@@ -211,6 +220,59 @@ class GoogleSheets:
                 }
             })
             set_column_width(ws, 'A', 200)
+
+            # TEXT FORMAT 
+            percent_rows = []
+            for j in range(3):
+                for k in range(1, categories_count + 1):
+                    if j == 2:
+                        percent_rows.append(
+                            f'{
+                                self.tg.convert_num_to_letters(
+                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + (3 * k) - 1
+                                )
+                            }:{
+                                self.tg.convert_num_to_letters(
+                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 3 * k
+                                )
+                            }'
+                        )
+                    else:
+                        percent_rows.append(
+                            f'{
+                                self.tg.convert_num_to_letters(
+                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 2 * k
+                                )
+                            }:{
+                                self.tg.convert_num_to_letters(
+                                    2 + (categories_count + 2) + (categories_count * 2 + 3) * j  + 2 * k
+                                )
+                            }'
+                        )
+                percent_rows.append(
+                    f'{self.tg.convert_num_to_letters(
+                        2 + categories_count * 3 + 3
+                    )}:{self.tg.convert_num_to_letters(
+                        2 + categories_count * 3 + 3
+                    )}'
+                )
+                percent_rows.append(f'{self.tg.convert_num_to_letters(
+                    2 + categories_count * 5 + 6
+                )}:{self.tg.convert_num_to_letters(
+                    2 + categories_count * 5 + 6 
+                )}')
+                percent_rows.append(f'{self.tg.convert_num_to_letters(
+                    2 + categories_count * 8 + 9
+                )}:{self.tg.convert_num_to_letters(
+                    2 + categories_count * 8 + 10
+                )}')
+            ws.format(
+                percent_rows, 
+                {
+                    'numberFormat': {'type': 'PERCENT'}
+                }
+            )
+
         except Exception as ex:
             logger.error(f'Ошибка формтирования таблицы: {ex}')
             time.sleep(10)
@@ -219,48 +281,40 @@ class GoogleSheets:
     def beautify_sheet(self, ws: gspread.Worksheet):
          # MERGE CELLS
         try:
+            diff = 120
             merges = []
             for i in range(3):
                 merges.extend(
                     [
-                        {"range": f"A{1 + 40 * i}:B{2 + 40 * i}"},
-                        {"range": f"A{3 + 40 * i}:B{4 + 40 * i}"},
-                        {"range": f"C{3 + 40 * i}:C{4 + 40 * i}"},
-                        {"range": f"D{3 + 40 * i}:D{4 + 40 * i}"},
-                        {"range": f"E{3 + 40 * i}:E{4 + 40 * i}"},
-                        *[{"range": f"{self.tg.convert_num_to_letters(6 + 9 * j)}{3 + 40 * i}:{self.tg.convert_num_to_letters(7 + 9 * j)}{3 + 40 * i}"} for j in range(5)]
+                        {"range": f"A{1 + diff * i}:B{2 + diff * i}"},
+                        {"range": f"A{3 + diff * i}:B{4 + diff * i}"},
+                        {"range": f"C{3 + diff * i}:C{4 + diff * i}"},
+                        {"range": f"D{3 + diff  * i}:D{4 + diff * i}"},
+                        {"range": f"E{3 + diff * i}:E{4 + diff * i}"},
+                        *[{"range": f"{self.tg.convert_num_to_letters(6 + 9 * j)}{3 + diff * i}:{self.tg.convert_num_to_letters(7 + 9 * j)}{3 + diff * i}"} for j in range(5)]
                     ]
                 )
-            for i in range(2):
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
                 merges.extend(
                     [
-                        {"range": f"A{5 + 40 * i}:A{8 + 40 * i}"},
-                        {"range": f"A{10 + 40 * i}:A{17 + 40 * i}"},
-                        {"range": f"A{19 + 40 * i}:A{26 + 40 * i}"},
-                        {"range": f"A{28 + 40 * i}:A{39 + 40 * i}"}
+                        {"range": f"A{5 + diff * i}:A{5 + min_size + diff * i}"},
+                        {"range": f"A{5 + min_size + 2 + diff * i}:A{5 + min_size * 3 + 3 + diff * i}"},
+                        {"range": f"A{5 + min_size * 3 + 5 + diff * i}:A{5 + min_size * 5 + 6 + diff * i}"},
+                        {"range": f"A{5 + min_size * 5 + 8 + diff * i}:A{5 + min_size * 8 + 10 + diff * i}"}
                     ]
                 )
-            merges.extend(
-                [
-                    {"range": "A85:A89"},
-                    {"range": "A91:A100"},
-                    {"range": "A102:A111"},
-                    {"range": "A113:A127"}
-                ]
-            )
+
             ws.batch_merge(
                 merges
             )
             # COLOR CELLS to RED
+            red_cells = []
+            for i in range(3):
+                red_cells.append(f'A{1 + diff * i}:B{2 + diff * i}')
+                red_cells.append(f'A{3 + diff * i}:AX{4 + diff * i}')
             ws.format(
-                [
-                    'A1:B2',
-                    'A3:AX4',
-                    'A41:B42',
-                    'A43:AX44',
-                    'A81:B82',
-                    'A83:AX84'
-                ],
+                red_cells,
                 {
                     "backgroundColor": {
                         "red": 0.9569,
@@ -270,12 +324,12 @@ class GoogleSheets:
                 }
             )
             # color to blue
+            blue_cells = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                blue_cells.append(f'A{5 + diff * i}:AX{5 + min_size + diff * i}')
             ws.format(
-                [
-                    'A5:AX8',
-                    'A45:AX48',
-                    'A85:AX89'
-                ],
+                blue_cells,
                 {
                     "backgroundColor": {
                         "red": 0.7882,
@@ -285,12 +339,12 @@ class GoogleSheets:
                 }
             )
             # PURPLE
+            purple_cells = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                purple_cells.append(f'A{5 + min_size + 2 + diff * i}:AX{5 + min_size * 3 + 3 + diff * i}')
             ws.format(
-                [
-                    'A10:AX17',
-                    'A50:AX57',
-                    'A91:AX100'
-                ],
+                purple_cells,
                 {
                     "backgroundColor": {
                         "red": 0.851,
@@ -300,12 +354,12 @@ class GoogleSheets:
                 }
             )
             # YELLOW
+            yellow_cells = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                yellow_cells.append(f'A{5 + min_size * 3 + 5 + diff * i}:AX{5 + min_size * 5 + 6 + diff * i}')
             ws.format(
-                [
-                    'A19:AX26',
-                    'A59:AX66',
-                    'A102:AX111'
-                ],
+                yellow_cells,
                 {
                     "backgroundColor": {
                         "red": 1.0,
@@ -315,12 +369,12 @@ class GoogleSheets:
                 }
             )
             # GREEN
+            green_cells = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                green_cells.append(f'A{5 + min_size * 5 + 8 + diff * i}:AX{5 + min_size * 8 + 10 + diff * i}')
             ws.format(
-                [
-                    'A28:AX39',
-                    'A68:AX79',
-                    'A113:AX127'
-                ],
+                green_cells,
                 {
                     "backgroundColor": {
                         "red": 0.851,
@@ -330,11 +384,16 @@ class GoogleSheets:
                 }
             )
             # color cells to rgb(102, 102, 102) GREY
-            ws.format([
-                    'A9:AX9', 'A18:AX18', 'A27:AX27', 'A40:AX40',
-                    'A49:AX49', 'A58:AX58', 'A67:AX67', 'A80:AX80',
-                    'A90:AX90', 'A101:AX101', 'A112:AX112', 'A128:AX128',
-                ], {
+            grey_cells = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                grey_cells.append(f'A{5 + min_size + 1 + diff * i}:AX{5 + min_size + 1 + diff * i}')
+                grey_cells.append(f'A{5 + min_size * 3 + 4 + diff * i}:AX{5 + min_size * 3 + 4 + diff * i}')
+                grey_cells.append(f'A{5 + min_size * 5 + 7 + diff * i}:AX{5 + min_size * 5 + 7 + diff * i}')
+                grey_cells.append(f'A{5 + min_size * 8 + 11 + diff * i}:AX{5 + min_size * 8 + 11 + diff * i}')
+            ws.format(
+                grey_cells, 
+                {
                     "backgroundColor": {
                             "red": 0.4,
                             "green": 0.4,
@@ -344,43 +403,54 @@ class GoogleSheets:
             )
             time.sleep(1.2)
             # TEXT EDIT
+            header = []
+            for i in range(3):
+                header.append(f'{3 + diff * i}:{4 + diff * i}')
             ws.format(
-                [
-                    '3:4',
-                    '43:44',
-                    '83:84',
-                ], {
+                header, 
+                {
                 'textFormat': {
                     "fontSize": 10,
                     "bold": True
                 }
             })
-            ws.format(['A1', 'A41', 'A81'], {
+            titles = []
+            for i in range(3):
+                titles.append(f'A{1 + diff * i}')
+            ws.format(
+                titles, 
+                {
                 'textFormat': {
                     "fontSize": 20,
                     "bold": True
                 }
             })
             time.sleep(0.5)
-            ws.format(['A5:A40', 'A45:A80', 'A85:A128'], {
+            header_row = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                header_row.append(f'A{5 + diff * i}:A{5 + min_size * 8 + 11 + diff * i}')
+            ws.format(
+                header_row, 
+                {
                 'textFormat': {
                     "fontSize": 15,
                     "bold": True
                 }
             })
-            ws.format(['A1:AX128'], {     
+            ws.format([f'A:B'], {     
                 'wrapStrategy': 'WRAP',
                 'horizontalAlignment': 'CENTER',
                 "verticalAlignment": 'MIDDLE'
             })
             time.sleep(0.8)
             # BORDERS 
+            all_borders = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                all_borders.append(f'A{3 + diff * i}:AX{5 + min_size * 8 + 11 + diff * i}')
             ws.format( #ALL
-                [
-                    'A3:AX40',
-                    'A43:AX80',
-                    'A83:AX128',
-                ],
+                all_borders,
                 {
                 'borders': {
                         "top": {
@@ -398,12 +468,11 @@ class GoogleSheets:
                     } 
                 }
             )
+            top_borders = []
+            for i in range(3):
+                top_borders.append(f'A{2 + diff * i}:AX{2 + diff * i}')
             ws.format(  # TOP
-                [
-                    'A2:AX2',
-                    'A42:AX42',
-                    'A82:AX82'
-                ],
+                top_borders,
                 {  
                     'borders': {
                         "bottom": {
@@ -413,12 +482,12 @@ class GoogleSheets:
                 }
             )
             time.sleep(0.9)
+            bottom_borders = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                bottom_borders.append(f'A{5 + min_size * 8 + 12 + diff * i}:AX{5 + min_size * 8 + 12 + diff * i}')
             ws.format(  # BOTTOM
-                [
-                    'A41:AX41',
-                    'A81:AX81',
-                    'A129:AX129'
-                ],
+                bottom_borders,
                 {  
                     'borders': {
                         "top": {
@@ -427,32 +496,24 @@ class GoogleSheets:
                     }
                 }
             )
+            right_borders = []
+            for i in range(3):
+                min_size = len(categories) if i != 2 else len(categories_online)
+                right_borders.append(f'A{6 + diff * i}:B{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'E{6 + diff * i}:E{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'G{6 + diff * i}:G{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'N{6 + diff * i}:N{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'P{6 + diff * i}:P{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'W{6 + diff * i}:W{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'Y{6 + diff * i}:Y{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'AF{6 + diff * i}:AF{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'AH{6 + diff * i}:AH{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'AO{6 + diff * i}:AO{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'AQ{6 + diff * i}:AQ{5 + min_size * 8 + 11 + diff * i}')
+                right_borders.append(f'AX{6 + diff * i}:AX{5 + min_size * 8 + 11 + diff * i}')
+
             ws.format( # RIGHT SIDE
-                [
-                    'A6:B40',
-                    'E6:E40', 'G6:G40', 
-                    'N6:N40', 'P6:P40',
-                    'W6:W40', 'Y6:Y40',
-                    'AF6:AF40', 'AH6:AH40',
-                    'AO6:AO40', 'AQ6:AQ40',
-                    'AX6:AX40',
-
-                    'A46:B80',
-                    'E46:E80', 'G46:G80', 
-                    'N46:N80', 'P46:P80',
-                    'W46:W80', 'Y46:Y80',
-                    'AF46:AF80', 'AH46:AH80',
-                    'AO46:AO80', 'AQ46:AQ80',
-                    'AX46:AX80',
-
-                    'A86:B128',
-                    'E86:E128', 'G86:G128', 
-                    'N86:N128', 'P86:P128',
-                    'W86:W128', 'Y86:Y128',
-                    'AF86:AF128', 'AH86:AH128',
-                    'AO86:AO128', 'AQ86:AQ128',
-                    'AX86:AX128',
-                ],
+                right_borders,
                 {
                     'borders': {
                         "top": {
@@ -471,35 +532,34 @@ class GoogleSheets:
                 }
             )
             time.sleep(0.4)
+            right_up_angle_borders = []
+            for i in range(3):
+                right_up_angle_borders.append(f'A{5 + diff * i}')
+                right_up_angle_borders.append(f'B{5 + diff * i}')
+                right_up_angle_borders.append(f'E{5 + diff * i}')
+                right_up_angle_borders.append(f'G{5 + diff * i}')
+                right_up_angle_borders.append(f'F{3 + diff * i}:G{3 + diff * i}')
+                right_up_angle_borders.append(f'N{3 + diff * i}')
+                right_up_angle_borders.append(f'N{5 + diff * i}')
+                right_up_angle_borders.append(f'P{5 + diff * i}')
+                right_up_angle_borders.append(f'O{3 + diff * i}:P{3 + diff * i}')
+                right_up_angle_borders.append(f'W{3 + diff * i}')
+                right_up_angle_borders.append(f'W{5 + diff * i}')
+                right_up_angle_borders.append(f'Y{5 + diff * i}')
+                right_up_angle_borders.append(f'X{3 + diff * i}:Y{3 + diff * i}')
+                right_up_angle_borders.append(f'AF{3 + diff * i}')
+                right_up_angle_borders.append(f'AF{5 + diff * i}')
+                right_up_angle_borders.append(f'AH{5 + diff * i}')
+                right_up_angle_borders.append(f'AG{3 + diff * i}:AH{3 + diff * i}')
+                right_up_angle_borders.append(f'AO{3 + diff * i}')
+                right_up_angle_borders.append(f'AO{5 + diff * i}')
+                right_up_angle_borders.append(f'AQ{5 + diff * i}')
+                right_up_angle_borders.append(f'AP{3 + diff * i}:AQ{3 + diff * i}')
+                right_up_angle_borders.append(f'AX{3 + diff * i}')
+                right_up_angle_borders.append(f'AX{5 + diff * i}')
+                
             ws.format( # RIGHT UP ANGLE SIDE
-                [
-                    'A5', 
-                    'B5',
-                    'E5', 'G5', 'F3:G3',
-                    'N3', 'N5', 'P5', 'O3:P3',
-                    'W3', 'W5', 'Y5', 'X3:Y3',
-                    'AF3', 'AF5', 'AH5', 'AG3:AH3',
-                    'AO3', 'AO5', 'AQ5', 'AP3:AQ3',
-                    'AX5', 'AX3',
-
-                    'A45', 
-                    'B45',
-                    'E45', 'G45', 'F43:G43',
-                    'N43', 'N45', 'P45', 'O43:P43',
-                    'W43', 'W45', 'Y45', 'X43:Y43',
-                    'AF43', 'AF45', 'AH45', 'AG43:AH43',
-                    'AO43', 'AO45', 'AQ45', 'AP43:AQ43',
-                    'AX45', 'AX43',
-
-                    'A85', 
-                    'B85',
-                    'E85', 'G85', 'F83:G83',
-                    'N83', 'N85', 'P85', 'O83:P83',
-                    'W83', 'W85', 'Y85', 'X83:Y83',
-                    'AF83', 'AF85', 'AH85', 'AG83:AH83',
-                    'AO83', 'AO85', 'AQ85', 'AP83:AQ83',
-                    'AX85', 'AX83'
-                ],
+                right_up_angle_borders,
                 {
                     'borders': {
                         "top": {
@@ -517,12 +577,13 @@ class GoogleSheets:
                     }
                 }
             )
+            right_head_borders = []
+            for i in range(3):
+                right_head_borders.append(f'B{1 + diff * i}')
+                right_head_borders.append(f'B{3 + diff * i}')
+                right_head_borders.append(f'E{3 + diff * i}')
             ws.format( # RIGHT HEAD SOLID SIDE
-                [
-                    'B1', 'B3', 'E3',
-                    'B41', 'B43', 'E43',
-                    'B81', 'B83', 'E83'
-                ],
+                right_head_borders,
                 {
                     'borders': {
                         "top": {
@@ -541,26 +602,20 @@ class GoogleSheets:
                 }
             )
             time.sleep(0.3)
+            head_bot_side = []
+            for i in range(3):
+                head_bot_side.append(f'F{4 + diff * i}')
+                head_bot_side.append(f'O{4 + diff * i}')
+                head_bot_side.append(f'X{4 + diff * i}')
+                head_bot_side.append(f'AG{4 + diff * i}')
+                head_bot_side.append(f'AP{4 + diff * i}')
+                head_bot_side.append(F'H{4 + diff * i}:M{4 + diff * i}')
+                head_bot_side.append(F'Q{4 + diff * i}:V{4 + diff * i}')
+                head_bot_side.append(F'Z{4 + diff * i}:AE{4 + diff * i}')
+                head_bot_side.append(F'AI{4 + diff * i}:AN{4 + diff * i}')
+                head_bot_side.append(F'AR{4 + diff * i}:AW{4 + diff * i}')
             ws.format( #  HEAD BOT SIDE
-                [
-                    'F4', 'H4:M4',
-                    'O4', 'Q4:V4',
-                    'X4', 'Z4:AE4',
-                    'AG4', 'AI4:AN4',
-                    'AP4', 'AR4:AW4',
-
-                    'F44', 'H44:M44',
-                    'O44', 'Q44:V44',
-                    'X44', 'Z44:AE44',
-                    'AG44', 'AI44:AN44',
-                    'AP44', 'AR44:AW44',
-
-                    'F84', 'H84:M84',
-                    'O84', 'Q84:V84',
-                    'X84', 'Z84:AE84',
-                    'AG84', 'AI84:AN84',
-                    'AP84', 'AR84:AW84'
-                ],
+                head_bot_side,
                 {
                     'borders': {
                         "top": {
@@ -578,12 +633,12 @@ class GoogleSheets:
                     }
                 }
             )
+            right_head_side = []
+            for i in range(3):
+                right_head_side.append(f'C{3 + diff * i}')
+                right_head_side.append(f'D{3 + diff * i}')
             ws.format( # RIGHT HEAD SOLID SIDE
-                [
-                    'C3', 'D3',
-                    'C43', 'D43',
-                    'C83', 'D83'
-                ],
+                right_head_side,
                 {
                     'borders': {
                         "top": {
@@ -602,26 +657,20 @@ class GoogleSheets:
                 }
             )
             time.sleep(0.8)
+            right_bot_head = []
+            for i in range(3):
+                right_bot_head.append(f'G{4 + diff * i}')
+                right_bot_head.append(f'N{4 + diff * i}')
+                right_bot_head.append(f'P{4 + diff * i}')
+                right_bot_head.append(f'W{4 + diff * i}')
+                right_bot_head.append(f'Y{4 + diff * i}')
+                right_bot_head.append(f'AF{4 + diff * i}')
+                right_bot_head.append(f'AH{4 + diff * i}')
+                right_bot_head.append(f'AO{4 + diff * i}')
+                right_bot_head.append(f'AQ{4 + diff * i}')
+                right_bot_head.append(f'AX{4 + diff * i}')
             ws.format( # RIGHT BOT HEAD SOLID SIDE
-                [
-                    'G4', 'N4',
-                    'P4', 'W4',
-                    'Y4', 'AF4',
-                    'AH4', 'AO4',
-                    'AQ4', 'AX4',
-
-                    'G44', 'N44',
-                    'P44', 'W44',
-                    'Y44', 'AF44',
-                    'AH44', 'AO44',
-                    'AQ44', 'AX44',
-
-                    'G84', 'N84',
-                    'P84', 'W84',
-                    'Y84', 'AF84',
-                    'AH84', 'AO84',
-                    'AQ84', 'AX84'
-                ],
+                right_bot_head,
                 {
                     'borders': {
                         "top": {
@@ -640,22 +689,37 @@ class GoogleSheets:
                 }
             )
             # CELLS FORMAT
+            percent_rows = []
+            for i in range(3):
+                curr_cat = categories if i != 2 else categories_online
+                min_size = len(curr_cat)
+                for j in range(3):
+                    for k in range(1, min_size + 1):
+                        if j == 2:
+                            percent_rows.append(
+                                f'{
+                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + (3 * k) - 1
+                                }:{
+                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 3 * k
+                                }'
+                            )
+                        else:
+                            percent_rows.append(
+                                f'{
+                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 2 * k
+                                }:{
+                                    diff * i + 5 + (min_size + 2) + (min_size * 2 + 3) * j  + 2 * k
+                                }'
+                            )
+                percent_rows.append(f'{5 + min_size * 3 + 3 + diff * i}:{5 + min_size * 3 + 3 + diff * i}')
+                percent_rows.append(f'{5 + min_size * 5 + 6 + diff * i}:{5 + min_size * 5 + 6 + diff * i}')
+                percent_rows.append(f'{5 + min_size * 8 + 9 + diff * i}:{5 + min_size * 8 + 10 + diff * i}')
             ws.format(
-                [
-                    '12:12', '14:14', '16:17',
-                    '21:21', '23:23', '25:26',
-                    '30:31', '33:34', '36:39',
-
-                    '52:52', '54:54', '56:57',
-                    '61:61', '63:63', '65:66',
-                    '70:71', '73:74', '76:79',
-
-                    '93:93', '95:95', '97:97', '99:100',
-                    '104:104', '106:106', '108:108', '110:111',
-                    '115:116', '118:119', '121:122', '124:128'
-                ], {
-                'numberFormat': {'type': 'PERCENT'}
-            })
+                percent_rows, 
+                {
+                    'numberFormat': {'type': 'PERCENT'}
+                }
+            )
             time.sleep(0.6)
             # CELL SIZE
             set_column_width(ws, 'A', 190)
@@ -687,100 +751,17 @@ class GoogleSheets:
                     if week_num not in insert_data[year][month]['pipes'][pipe]:
                         insert_data[year][month]['pipes'][pipe][week_num] = [[] for _ in range(7)]
                     tmp_data = leads_data[pipe][start_day.year][start_day.month][start_day.day]
-                    if pipe != 'online':
-                        insert_data[year][month]['pipes'][pipe][week_num][weekday - 1] = [ 
-                            tmp_data[0],
-                            tmp_data[1],
-                            tmp_data[2],
-                            tmp_data[3],
-                            '',
-                            tmp_data[4],
-                            tmp_data[5],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 11, 6),
-                            tmp_data[6],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 13, 7),
-                            tmp_data[7],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 15, 8),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 10, 5),
-                            '',
-                            tmp_data[8],
-                            tmp_data[9],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 20, 11),
-                            tmp_data[10],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 22, 13),
-                            tmp_data[11],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 24, 15),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 19, 10),
-                            '',
-                            tmp_data[12],
-                            tmp_data[13],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 29, 11),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 29, 20),
-                            tmp_data[14],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 32, 13),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 32, 22),
-                            tmp_data[15],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 35, 15),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 35, 24),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 28, 10),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 28, 19)
-                        ]
-                    else:
-                        insert_data[year][month]['pipes'][pipe][week_num][weekday - 1] = [
-                            tmp_data[0],
-                            tmp_data[1],
-                            tmp_data[2],
-                            tmp_data[3],
-                            tmp_data[4],
-                            '',
-                            tmp_data[5],
-                            tmp_data[6],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 12, 6),
-                            tmp_data[6],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 14, 7),
-                            tmp_data[7],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 16, 8),
-                            tmp_data[8],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 18, 9),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 11, 5),
-                            '',
-                            tmp_data[9],
-                            tmp_data[10],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 23, 12),
-                            tmp_data[11],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 25, 14),
-                            tmp_data[12],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 27, 16),
-                            tmp_data[13],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 29, 18),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 22, 11),
-                            '',
-                            tmp_data[14],
-                            tmp_data[15],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 34, 12),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 34, 23),
-                            tmp_data[16],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 37, 14),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 37, 25),
-                            tmp_data[17],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 40, 16),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 40, 27),
-                            tmp_data[18],
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 43, 18),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 43, 29),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 33, 11),
-                            self.tg.get_div_col_formula(week_num, pipe, weekday, 33, 22)
-                        ]
+                    insert_data[year][month]['pipes'][pipe][week_num][weekday - 1] = self._get_insert_col(tmp_data, week_num, pipe, weekday)
                 start_day += datetime.timedelta(days=1)
-
             for year in insert_data:
                 for month in insert_data[year]:
                     day = insert_data[year][month]['last_day']
                     ws = self.get_sheet(month, year, day)
                     for pipe in insert_data[year][month]['pipes']:
-                        len_data = 35 if pipe != 'online' else 43
                         for weeknum in insert_data[year][month]['pipes'][pipe]:
                             week_data = insert_data[year][month]['pipes'][pipe][weeknum]
+                            len_cat = len(categories) if pipe != 'online' else len(categories_online)
+                            len_data = len_cat * 8 + 11 
                             ws.update(
                                 week_data,
                                 self.tg.get_week_range(pipe, weeknum, len_data),
@@ -793,6 +774,39 @@ class GoogleSheets:
             from traceback import print_exc
             print(print_exc())
             logger.error(f'Ошибка записи: {ex}')
+
+
+    def _get_insert_col(self, tmp_data, week_num, pipe_name, weekday):
+        rows = []
+        pipe_name = self.tg.pipe_names_rus.get(pipe_name, pipe_name)
+        if pipe_name != 'Онлайн':
+            cats = categories
+        else:
+            cats = categories_online
+        field_num = 0
+        for _, group in groups.items():
+            for field_name, field_info in group['base'].items():
+                if field_name == 'categories':
+                    for cat in cats:
+                        fields = field_info['fields']
+                        for field in fields:
+                            if field['type'] == 'ratio':
+                                a = self.tg.temp[pipe_name][field['a']][cat]
+                                b = self.tg.temp[pipe_name][field['b']][cat]
+                                rows.append(self.tg.get_div_col_formula(week_num, weekday, a, b))
+                            else:
+                                rows.append(tmp_data[field_num])
+                                field_num += 1
+                else:
+                    if field_info['type'] == 'ratio':
+                        a = self.tg.temp[pipe_name][field_info['a']][cat]
+                        b = self.tg.temp[pipe_name][field_info['b']][cat]
+                        rows.append(self.tg.get_div_col_formula(week_num, weekday, a, b))
+                    else:
+                        rows.append(tmp_data[field_num])
+                        field_num += 1
+            rows.append('')
+        return rows
         
     def insert_leads_data_vertical(self, leads_data: dict):
         try:
@@ -808,95 +822,12 @@ class GoogleSheets:
                         for day in leads_data[pipe][year][month]:
                             tmp_data = leads_data[pipe][year][month][day]
                             min_day = min(day, min_day)
-                            if pipe != "online":
-                                insert_data[pipe][year][month]['data'].append(
-                                    [
-                                    f'{year}.{month}.{day}',
-                                    tmp_data[0],
-                                    tmp_data[1],
-                                    tmp_data[2],
-                                    tmp_data[3],
-                                    '',
-                                    tmp_data[4],
-                                    tmp_data[5],
-                                    f'=H{2 + day}/C{2 + day}',
-                                    tmp_data[6],
-                                    f'=J{2 + day}/D{2 + day}',
-                                    tmp_data[7],
-                                    f'=L{2 + day}/E{2 + day}',
-                                    f'=G{2 + day}/B{2 + day}',
-                                    '',
-                                    tmp_data[8],
-                                    tmp_data[9],
-                                    f'=Q{2 + day}/H{2 + day}',
-                                    tmp_data[10],
-                                    f'=S{2 + day}/J{2 + day}',
-                                    tmp_data[11],
-                                    f'=U{2 + day}/M{2 + day}',
-                                    f'=P{2 + day}/G{2 + day}',
-                                    '',
-                                    tmp_data[12],
-                                    tmp_data[13],
-                                    f'=Z{2 + day}/H{2 + day}',
-                                    f'=Z{2 + day}/Q{2 + day}',
-                                    tmp_data[14],
-                                    f'=AC{2 + day}/J{2 + day}',
-                                    f'=AC{2 + day}/S{2 + day}',
-                                    tmp_data[15],
-                                    f'=AF{2 + day}/L{2 + day}',
-                                    f'=AF{2 + day}/U{2 + day}',
-                                    f'=Y{2 + day}/G{2 + day}',
-                                    f'=Y{2 + day}/P{2 + day}'
+                            insert_data[pipe][year][month]['data'].append(
+                                [
+                                f'{year}.{month}.{day}',
+                                *self._get_insert_vertical_rows(tmp_data, day, pipe)
                                 ]
-                                )
-                            else:
-                                insert_data[pipe][year][month]['data'].append( [
-                                    f'{year}.{month}.{day}',
-                                    tmp_data[0],
-                                    tmp_data[1],
-                                    tmp_data[2],
-                                    tmp_data[3],
-                                    tmp_data[4],
-                                    '',
-                                    tmp_data[5],
-                                    tmp_data[6],
-                                    f'=I{2 + day}/C{2 + day}',
-                                    tmp_data[7],
-                                    f'=K{2 + day}/D{2 + day}',
-                                    tmp_data[8],
-                                    f'=M{2 + day}/E{2 + day}',
-                                    tmp_data[9],
-                                    f'=O{2 + day}/F{2 + day}',
-                                    f'=H{2 + day}/B{2 + day}',
-                                    '',
-                                    tmp_data[10],
-                                    tmp_data[11],
-                                    f'=T{2 + day}/I{2 + day}',
-                                    tmp_data[12],
-                                    f'=V{2 + day}/K{2 + day}',
-                                    tmp_data[13],
-                                    f'=X{2 + day}/M{2 + day}',
-                                    tmp_data[14],
-                                    f'=Z{2 + day}/O{2 + day}',
-                                    f'=S{2 + day}/H{2 + day}',
-                                    '',
-                                    tmp_data[15],
-                                    tmp_data[16],
-                                    f'=AE{2 + day}/I{2 + day}',
-                                    f'=AE{2 + day}/T{2 + day}',
-                                    tmp_data[17],
-                                    f'=AH{2 + day}/K{2 + day}',
-                                    f'=AH{2 + day}/V{2 + day}',
-                                    tmp_data[18],
-                                    f'=AK{2 + day}/M{2 + day}',
-                                    f'=AK{2 + day}/X{2 + day}',
-                                    tmp_data[19],
-                                    f'=AN{2 + day}/O{2 + day}',
-                                    f'=AN{2 + day}/Z{2 + day}',
-                                    f'=AD{2 + day}/H{2 + day}',
-                                    f'=AD{2 + day}/S{2 + day}'
-                                ]
-                                )
+                            )
                         insert_data[pipe][year][month]['first_day'] = min_day 
             for pipe in insert_data:
                 for year in insert_data[pipe]:
@@ -905,7 +836,7 @@ class GoogleSheets:
                         ws = self.get_vertical_sheet(month, year, pipe)
                         ws.update(
                             insert_data[pipe][year][month]['data'][::-1],
-                            f'A{2 + min_day}:AR{33}',
+                            f'A{2 + min_day}:DU{33}',
                             value_input_option="USER_ENTERED"
                         )
                         time.sleep(0.3)
@@ -915,9 +846,46 @@ class GoogleSheets:
             print(traceback.print_exc())
             logger.error(f'Ошибка записи: {ex}')
 
+    def _get_insert_vertical_rows(self, tmp_data, day, pipe_name):
+        rows = []
+        diff = 2
+        ubrat = 5 + self.tg.PIPELINES_DIFF[pipe_name]
+        pipe_name = self.tg.pipe_names_rus.get(pipe_name, pipe_name)
+        if pipe_name != 'Онлайн':
+            cats = categories
+        else:
+            cats = categories_online
+        field_num = 0
+        for _, group in groups.items():
+            for field_name, field_info in group['base'].items():
+                if field_name == 'categories':
+                    for cat in cats:
+                        fields = field_info['fields']
+                        for field in fields:
+                            if field['type'] == 'ratio':
+                                a = self.tg.temp[pipe_name][field['a']][cat] - ubrat + diff
+                                b = self.tg.temp[pipe_name][field['b']][cat] - ubrat + diff
+                                rows.append(self.tg.get_vertical_div_col_formula(day, a, b))
+                            else:
+                                rows.append(tmp_data[field_num])
+                                field_num += 1
+                else:
+                    if field_info['type'] == 'ratio':
+                        a = self.tg.temp[pipe_name][field_info['a']][cat] - ubrat + diff
+                        b = self.tg.temp[pipe_name][field_info['b']][cat] - ubrat + diff
+                        rows.append(self.tg.get_vertical_div_col_formula(day, a, b))
+                    else:
+                        rows.append(tmp_data[field_num])
+                        field_num += 1
+            rows.append('')
+        return rows
+
     
 if __name__ == '__main__':
     gs = GoogleSheets()
     # ws = gs.get_sheet(9999999999)
-    ws = gs.create_new_sheet('test sheet')
+    td = datetime.date.today()
+    # ws = gs.create_worksheet(td)
+    ws = gs.create_vertical_worksheet('тест онлайн', 'online')
+    ws = gs.create_vertical_worksheet('тест астана', 'astana')
     # print(Constructor.get_date_row())

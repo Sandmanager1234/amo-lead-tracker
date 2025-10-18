@@ -6,8 +6,28 @@ from loguru import logger
 from dotenv import load_dotenv
 
 from kztime import get_local_datetime, get_today_info
+from google_sheets.shablon import categories, categories_online
 
 load_dotenv()
+
+
+def make_filter(pipe, day, tags_type = None, extra_flags=None):
+    def _filter(x):
+        if not (
+            x.dt_created_at.day == day.day and
+            x.dt_created_at.month == day.month and
+            x.pipe_name == pipe
+        ):
+            return False
+        if tags_type is not None and x.tags_type != tags_type:
+            return False
+        # если передали доп. флаги — проверяем, что все True
+        if extra_flags:
+            for flag in extra_flags:
+                if not getattr(x, flag, False):
+                    return False
+        return True
+    return _filter
 
 
 class Event:
@@ -135,8 +155,27 @@ class Tag:
         self.target_type = self.__get_target_type()
 
     def __get_target_type(self):
-
         if self.is_other_city():
+            return -11
+        elif self.name == 'GOOGLE':
+            return -10
+        elif self.name == 'TIKTOK':
+            return -9
+        elif self.name == 'SEO':
+            return -8
+        elif self.name == 'InstagramBio':
+            return -7
+        elif self.name == 'InstagramDirect':
+            return -6
+        elif self.name == 'InstagramManychat':
+            return -5
+        elif self.name == 'WZ (WABA Аст - 77474224051)':
+            return -4
+        elif self.name == 'WZ (Аст - 77055153346)':
+            return -3
+        elif self.name == 'WZ (WABA Алм - 77474223609)':
+            return -2
+        elif self.name == 'WZ (Алм - 77780879617)':
             return -1
         elif self.is_target():
             return 0
@@ -284,11 +323,14 @@ class Lead:
             self.dt_created_at = get_local_datetime(self.created_at)
             self.updated_at = data.get('updated_at', 0)
             
+            qual_flag = None
             fields = data.get("custom_fields_values", []) if data.get("custom_fields_values", []) else []
             for field in fields:
                 match field.get("field_name", None):
                     case 'ЗНР причина':
                         self.reject_reason = self.__get_value_from_json(field)
+                    case 'Квалификация пройдена':
+                        qual_flag = self.__get_value_from_json(field)
                     case _:
                         continue
             if self.pipeline_id in self.success_pipes or self.status_id == os.getenv('status_online_success'):
@@ -297,10 +339,13 @@ class Lead:
             if (self.status_id not in self.after_processing_statuses.get(self.pipeline_id, []) or self.is_success):
                 self.is_after_processing = True
             
-            if (self.status_id not in self.after_processing_statuses.get(self.pipeline_id, [])
-                and 
-                self.reject_reason not in ['Не прошли квал', 'НД']):
-                self.is_qual = True
+            if qual_flag is None:
+                if (self.status_id not in self.after_processing_statuses.get(self.pipeline_id, [])
+                    and 
+                    self.reject_reason not in ['Не прошли квал', 'НД']):
+                    self.is_qual = True
+            else:
+                self.is_qual = qual_flag
 
             return self
         except KeyError as e:
@@ -338,273 +383,38 @@ class Leads:
         self.leads.append(lead)
         self.count += 1
 
-    def get_total_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: (x.dt_created_at.day == day.day and x.dt_created_at.month == day.month) and x.pipe_name == pipe, 
-                    self.leads
-                )
-            )
-        )
+    def get_category_data(self, tags_type, pipe, day):
+        total_filter = make_filter(pipe, day, tags_type)
+        process_filter = make_filter(pipe, day, tags_type, extra_flags=['is_after_processing'])
+        qual_filter = make_filter(pipe, day, tags_type, extra_flags=['is_qual'])
+        success_filter = make_filter(pipe, day, tags_type, extra_flags=['is_success'])
+        total = len(list(filter(total_filter, self.leads)))
+        process = len(list(filter(process_filter, self.leads)))
+        qual = len(list(filter(qual_filter, self.leads)))
+        success = len(list(filter(success_filter, self.leads)))
+        return total, process, qual, success
 
-    def get_target_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x:
-                        x.tags_type == 0 and (
-                            x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                        ) and x.pipe_name == pipe, 
-                    self.leads
-                )
-            )
-        )
-        
-    def get_zvonobot_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: 
-                        x.tags_type == 1 and (
-                            x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                            ) and x.pipe_name == pipe, self.leads
-                        )
-                    )
-                )
-    
-    def get_other_city_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == -1 and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                        ) and x.pipe_name == pipe, self.leads
-                    )
-                )
-            )
-    
-    def get_other_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 2 and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                        ) and x.pipe_name == pipe, self.leads
-                    )
-                )
-            )
-    
-    def get_after_processing_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.is_after_processing == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_qual_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.is_qual == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_success_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.is_success == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_qual_target_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 0 and x.is_qual == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_qual_zvonobot_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 1 and x.is_qual == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_qual_other_city_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == -1 and x.is_qual == True and (
-                    x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                ) and x.pipe_name == pipe, self.leads
-            )
-        )
-    )
-    
-    def get_qual_other_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 2 and x.is_qual == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_processing_target_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 0 and x.is_after_processing == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_processing_zvonobot_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 1 and x.is_after_processing == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_processing_other_city_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == -1 and x.is_after_processing == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_processing_other_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 2 and x.is_after_processing == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_success_target_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 0 and x.is_success == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_success_zvonobot_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 1 and x.is_success == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
-    def get_success_other_city_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: 
-                        x.tags_type == -1 and x.is_success == True and (
-                            x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                        ) and x.pipe_name == pipe, 
-                    self.leads
-                )
-            )
-        )
-    
-    def get_success_other_count(self, pipe: str, day: datetime):
-        return len(
-            list(
-                filter(
-                    lambda x: x.tags_type == 2 and x.is_success == True and (
-                        x.dt_created_at.day == day.day and x.dt_created_at.month == day.month
-                    ) and x.pipe_name == pipe, self.leads
-                )
-            )
-        )
-    
     def get_day_data(self, pipe, dt):
+        total = []
+        process = []
+        qual = []
+        success = []
         if pipe == 'online':
-            return [
-                self.get_total_count(pipe, dt),
-                self.get_target_count(pipe, dt),
-                self.get_zvonobot_count(pipe, dt),
-                self.get_other_city_count(pipe, dt),
-                self.get_other_count(pipe, dt),
-                self.get_after_processing_count(pipe, dt),
-                self.get_processing_target_count(pipe, dt),
-                self.get_processing_zvonobot_count(pipe, dt),
-                self.get_processing_other_city_count(pipe, dt),
-                self.get_processing_other_count(pipe, dt),
-                self.get_qual_count(pipe, dt),
-                self.get_qual_target_count(pipe, dt),
-                self.get_qual_zvonobot_count(pipe, dt),
-                self.get_qual_other_city_count(pipe, dt),
-                self.get_qual_other_count(pipe, dt),
-                self.get_success_count(pipe, dt),
-                self.get_success_target_count(pipe, dt),
-                self.get_success_zvonobot_count(pipe, dt),
-                self.get_success_other_city_count(pipe, dt),
-                self.get_success_other_count(pipe, dt)
-            ]
+            curr_categories = categories_online
         else:
-            return [
-                self.get_total_count(pipe, dt),
-                self.get_target_count(pipe, dt),
-                self.get_zvonobot_count(pipe, dt),
-                self.get_other_count(pipe, dt),
-                self.get_after_processing_count(pipe, dt),
-                self.get_processing_target_count(pipe, dt),
-                self.get_processing_zvonobot_count(pipe, dt),
-                self.get_processing_other_count(pipe, dt),
-                self.get_qual_count(pipe, dt),
-                self.get_qual_target_count(pipe, dt),
-                self.get_qual_zvonobot_count(pipe, dt),
-                self.get_qual_other_count(pipe, dt),
-                self.get_success_count(pipe, dt),
-                self.get_success_target_count(pipe, dt),
-                self.get_success_zvonobot_count(pipe, dt),
-                self.get_success_other_count(pipe, dt)
-            ]
+            curr_categories = categories
+        t, ap, q, s = self.get_category_data(None, pipe, dt)
+        total.append(t)
+        process.append(ap)
+        qual.append(q)
+        success.append(s)
+        for i in curr_categories.values():
+            t, ap, q, s = self.get_category_data(i, pipe, dt)
+            total.append(t)
+            process.append(ap)
+            qual.append(q)
+            success.append(s)
+        return [*total, *process, *qual, *success]
         
     def get_column_data(self, pipelines: list):
         last_30_days_data = {}

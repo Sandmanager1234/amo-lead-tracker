@@ -96,8 +96,6 @@ def test():
     #     leads_data = json.load(file)
     # google.insert_leads_data(leads_data, start_day)    
     # google.insert_leads_data_vertical(leads_data)
-    print(start_day)
-    ws = google.get_vertical_sheet(8, 2025, 'online')
     # print(google.tg.create_vertical_shablon('online'))
     # print(ws)
     # shab, m = google.tg.create_shablon(day)
@@ -111,6 +109,6 @@ def main():
 
 # Запуск приложения
 if __name__ == "__main__":
-    while True:
-        run_pending()
-    # main()
+    # while True:
+    #     run_pending()
+    main()
