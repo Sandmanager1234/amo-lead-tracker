@@ -109,6 +109,6 @@ def main():
 
 # Запуск приложения
 if __name__ == "__main__":
-    # while True:
-    #     run_pending()
-    main()
+    while True:
+        run_pending()
+    # main()
