@@ -32,6 +32,7 @@ class GoogleSheets:
         try:
             ws = self.table.worksheet(sheet_name)
             time.sleep(0.3)
+            self.check_styles(ws, today)
         except gspread.WorksheetNotFound as ex:
             logger.warning(f'Лист {sheet_name} не найден. Ошибка: {ex}')
             ws = self.create_worksheet(today)
@@ -40,19 +41,40 @@ class GoogleSheets:
             time.sleep(30)
             ws = self.get_sheet(month, year, today)
         return ws
+    
+    def check_styles(self, ws: gspread.Worksheet, today):
+        value = ws.cell(1, 1).value
+        if not value:
+            self.style_table(ws, today)
 
     def create_worksheet(self, today):
         try:
             shablon, month = self.tg.create_shablon(today)
             ws = self.table.add_worksheet(f'{self.tg.MONTH[month]} (ОП) {today.year}', (5 + len(categories_online) * 8 + 11) * 3, 52)
             ws.insert_cols(shablon, value_input_option="USER_ENTERED")
-            self.beautify_sheet(ws)
+            try:
+                self.beautify_sheet(ws)
+            except:
+                time.sleep(60)
+                self.beautify_sheet(ws)
             time.sleep(1)
             return ws
         except Exception as ex:
             logger.error(f'Ошибка создания таблицы Маркетинг: {ex}')
             raise
-            
+
+
+    def style_table(self, ws: gspread.Worksheet, today):      
+        shablon, month = self.tg.create_shablon(today)
+        try:
+            ws.insert_cols(shablon, value_input_option="USER_ENTERED")  
+            self.beautify_sheet(ws)
+        except:
+            time.sleep(60)
+            ws.insert_cols(shablon, value_input_option="USER_ENTERED")  
+            time.sleep(10)
+            self.beautify_sheet(ws)
+
     
     def get_vertical_sheet(self, month, year, pipe) -> gspread.Worksheet:
         sheet_name = f'{self.tg.pipe_names_rus.get(pipe, pipe)} {self.tg.MONTH[month]} {year}'
